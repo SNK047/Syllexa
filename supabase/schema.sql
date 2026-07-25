@@ -347,7 +347,7 @@ CREATE POLICY "Requests are viewable by everyone" ON requests FOR SELECT USING (
 CREATE POLICY "Users can insert own requests" ON requests FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own requests" ON requests FOR DELETE USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own requests" ON requests FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can fulfill open requests" ON requests FOR UPDATE USING (auth.uid() IS NOT NULL AND status = 'open');
+CREATE POLICY "Users can fulfill open requests" ON requests FOR UPDATE USING (auth.uid() IS NOT NULL AND status = 'open') WITH CHECK (true);
 
 -- Comments: viewable by everyone
 CREATE POLICY "Comments are viewable by everyone" ON comments FOR SELECT USING (true);
