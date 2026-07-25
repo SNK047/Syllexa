@@ -6,6 +6,10 @@ export async function uploadFile(file: File, path: string) {
   const supabase = await createClient();
   if (!supabase) return { data: null, error: "Supabase not configured" };
 
+  if (file.type !== "application/pdf") {
+    return { data: null, error: "Only PDF files are allowed" };
+  }
+
   const { data, error } = await supabase.storage
     .from("notes")
     .upload(path, file, {
