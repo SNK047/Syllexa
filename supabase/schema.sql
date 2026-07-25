@@ -128,7 +128,8 @@ CREATE TABLE requests (
   urgency TEXT DEFAULT 'normal',
   reward_credits INTEGER DEFAULT 10,
   status TEXT DEFAULT 'open',
-  fulfilled_by UUID,
+  fulfilled_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  note_id UUID REFERENCES notes(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -345,6 +346,8 @@ CREATE POLICY "Users can delete own notes" ON notes FOR DELETE USING (auth.uid()
 CREATE POLICY "Requests are viewable by everyone" ON requests FOR SELECT USING (true);
 CREATE POLICY "Users can insert own requests" ON requests FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own requests" ON requests FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own requests" ON requests FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can fulfill open requests" ON requests FOR UPDATE USING (auth.uid() IS NOT NULL AND status = 'open');
 
 -- Comments: viewable by everyone
 CREATE POLICY "Comments are viewable by everyone" ON comments FOR SELECT USING (true);

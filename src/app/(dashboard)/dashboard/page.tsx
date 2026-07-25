@@ -57,10 +57,11 @@ export default function DashboardPage() {
         }
 
         // Fetch open requests count
-        const { getRequests } = await import("@/actions/requests");
-        const { data: requests } = await getRequests({ limit: 100 });
+        const { getAllRequests } = await import("@/actions/requests");
+        const { data: requests } = await getAllRequests(100);
         if (requests) {
-          setStats((s) => ({ ...s, openRequests: requests.length }));
+          const openRequests = requests.filter((r: any) => r.status === "open").length;
+          setStats((s) => ({ ...s, openRequests }));
         }
       }
     } catch (err) {
