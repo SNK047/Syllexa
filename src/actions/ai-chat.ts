@@ -11,24 +11,23 @@ export async function chatWithNote(
   if (!supabase) return { error: "Supabase not configured" };
 
   try {
-    // Get note content
     const { data: note } = await supabase
       .from("notes")
       .select("content_text, title")
       .eq("id", noteId)
       .single();
 
-    if (!note?.content_text) {
-      return { error: "Note content not available. The PDF text has not been extracted yet." };
+    if (!note?.content_text || note.content_text.trim().length < 50) {
+      return {
+        error: "This note's text has not been extracted yet. Please re-upload the note to enable AI chat.",
+      };
     }
 
-    // Get relevant context using RAG
     const lastUserMsg = messages.filter((m) => m.role === "user").pop();
     const context = lastUserMsg
       ? await getContextForQuery(lastUserMsg.content, note.content_text)
       : note.content_text.slice(0, 4000);
 
-    // Generate response
     const response = await generateChatResponse(messages, context);
     return { data: response };
   } catch (err: any) {
@@ -38,7 +37,7 @@ export async function chatWithNote(
       return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
     }
     if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
-      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in environment variables." };
+      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in Vercel environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }
@@ -57,7 +56,7 @@ export async function chatGeneral(
       return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
     }
     if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
-      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in environment variables." };
+      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in Vercel environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }
@@ -78,6 +77,6 @@ export async function saveConversation(noteId: string, messages: any[]) {
       messages,
     });
   } catch {
-    // Silently fail for conversation saving
+    // Silently fail
   }
 }

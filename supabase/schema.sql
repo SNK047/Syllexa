@@ -310,6 +310,20 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credits_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE universities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE semesters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE topics ENABLE ROW LEVEL SECURITY;
+
+-- Hierarchy tables: everyone can read (public data)
+CREATE POLICY "Universities are viewable by everyone" ON universities FOR SELECT USING (true);
+CREATE POLICY "Departments are viewable by everyone" ON departments FOR SELECT USING (true);
+CREATE POLICY "Semesters are viewable by everyone" ON semesters FOR SELECT USING (true);
+CREATE POLICY "Subjects are viewable by everyone" ON subjects FOR SELECT USING (true);
+CREATE POLICY "Units are viewable by everyone" ON units FOR SELECT USING (true);
+CREATE POLICY "Topics are viewable by everyone" ON topics FOR SELECT USING (true);
 
 -- Users: everyone can read, only owner can update
 CREATE POLICY "Users are viewable by everyone" ON users FOR SELECT USING (true);

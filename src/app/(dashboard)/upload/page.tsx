@@ -82,7 +82,16 @@ export default function UploadPage() {
         return;
       }
 
-      // 2. Create note record
+      // 2. Extract text from PDF (client-side)
+      let contentText = "";
+      try {
+        const { extractTextFromPDF } = await import("@/lib/pdf-extract");
+        contentText = await extractTextFromPDF(file);
+      } catch {
+        // PDF extraction failed — continue without text
+      }
+
+      // 3. Create note record
       const { createNote } = await import("@/actions/notes");
       const noteResult = await createNote({
         title,
@@ -91,6 +100,7 @@ export default function UploadPage() {
         unit_id: hierarchy.unitId,
         file_url: uploadResult.data!.publicUrl,
         file_size: file.size,
+        content_text: contentText || undefined,
       });
 
       if (noteResult.error) {
