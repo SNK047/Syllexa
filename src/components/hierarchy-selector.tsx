@@ -1,13 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
 interface HierarchyData {
@@ -138,47 +131,48 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
     setLoading((l) => ({ ...l, units: false }));
   }
 
+  const selectClass =
+    "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+
   return (
     <div className="space-y-4">
       {/* University */}
       <div className="space-y-2">
         <Label>University</Label>
-        <Select
+        <select
+          className={selectClass}
           value={selected.universityId}
-          onValueChange={(v) => setSelected((s) => ({ ...s, universityId: v || "" }))}
+          onChange={(e) => setSelected((s) => ({ ...s, universityId: e.target.value }))}
         >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={loading.universities ? "Loading..." : "Select university"} />
-          </SelectTrigger>
-          <SelectContent>
-            {data.universities.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <option value="">
+            {loading.universities ? "Loading..." : "Select university"}
+          </option>
+          {data.universities.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Department */}
       {selected.universityId && (
         <div className="space-y-2">
           <Label>Department</Label>
-          <Select
+          <select
+            className={selectClass}
             value={selected.departmentId}
-            onValueChange={(v) => setSelected((s) => ({ ...s, departmentId: v || "" }))}
+            onChange={(e) => setSelected((s) => ({ ...s, departmentId: e.target.value }))}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={loading.departments ? "Loading..." : "Select department"} />
-            </SelectTrigger>
-            <SelectContent>
-              {data.departments.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">
+              {loading.departments ? "Loading..." : "Select department"}
+            </option>
+            {data.departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -186,21 +180,20 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
       {selected.departmentId && (
         <div className="space-y-2">
           <Label>Semester</Label>
-          <Select
+          <select
+            className={selectClass}
             value={selected.semesterId}
-            onValueChange={(v) => setSelected((s) => ({ ...s, semesterId: v || "" }))}
+            onChange={(e) => setSelected((s) => ({ ...s, semesterId: e.target.value }))}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={loading.semesters ? "Loading..." : "Select semester"} />
-            </SelectTrigger>
-            <SelectContent>
-              {data.semesters.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  Semester {s.number}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">
+              {loading.semesters ? "Loading..." : "Select semester"}
+            </option>
+            {data.semesters.map((s) => (
+              <option key={s.id} value={s.id}>
+                Semester {s.number}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -208,21 +201,20 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
       {selected.semesterId && (
         <div className="space-y-2">
           <Label>Subject</Label>
-          <Select
+          <select
+            className={selectClass}
             value={selected.subjectId}
-            onValueChange={(v) => setSelected((s) => ({ ...s, subjectId: v || "" }))}
+            onChange={(e) => setSelected((s) => ({ ...s, subjectId: e.target.value }))}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={loading.subjects ? "Loading..." : "Select subject"} />
-            </SelectTrigger>
-            <SelectContent>
-              {data.subjects.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.code} - {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">
+              {loading.subjects ? "Loading..." : "Select subject"}
+            </option>
+            {data.subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.code} - {s.name}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -230,21 +222,20 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
       {selected.subjectId && (
         <div className="space-y-2">
           <Label>Unit</Label>
-          <Select
+          <select
+            className={selectClass}
             value={selected.unitId}
-            onValueChange={(v) => setSelected((s) => ({ ...s, unitId: v || "" }))}
+            onChange={(e) => setSelected((s) => ({ ...s, unitId: e.target.value }))}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={loading.units ? "Loading..." : "Select unit"} />
-            </SelectTrigger>
-            <SelectContent>
-              {data.units.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  Unit {u.number} - {u.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">
+              {loading.units ? "Loading..." : "Select unit"}
+            </option>
+            {data.units.map((u) => (
+              <option key={u.id} value={u.id}>
+                Unit {u.number} - {u.title}
+              </option>
+            ))}
+          </select>
         </div>
       )}
     </div>
