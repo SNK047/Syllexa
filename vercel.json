@@ -2,18 +2,5 @@
   "framework": "nextjs",
   "buildCommand": "npx next build",
   "installCommand": "npm install",
-  "regions": ["sin1"],
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase-service-role-key",
-    "GOOGLE_AI_STUDIO_KEY": "@google-ai-studio-key",
-    "PINECONE_API_KEY": "@pinecone-api-key",
-    "PINECONE_INDEX": "syllexa",
-    "UPSTASH_REDIS_REST_URL": "@upstash-redis-url",
-    "UPSTASH_REDIS_REST_TOKEN": "@upstash-redis-token",
-    "NEXT_PUBLIC_POSTHOG_KEY": "@posthog-key",
-    "SENTRY_DSN": "@sentry-dsn",
-    "RESEND_API_KEY": "@resend-api-key"
-  }
+  "regions": ["sin1"]
 }
