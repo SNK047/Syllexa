@@ -17,12 +17,11 @@ export default function AIChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -74,7 +73,7 @@ export default function AIChatPage() {
       {/* Messages */}
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardContent className="flex-1 flex flex-col p-0">
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -121,6 +120,8 @@ export default function AIChatPage() {
                     className={`max-w-[80%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground"
+                        : msg.content.startsWith("Error:") || msg.content.startsWith("AI error:")
+                        ? "bg-destructive/10 text-destructive border border-destructive/20"
                         : "bg-muted"
                     }`}
                   >
@@ -145,6 +146,7 @@ export default function AIChatPage() {
                   </div>
                 </div>
               )}
+              <div ref={bottomRef} />
             </div>
           </ScrollArea>
         </CardContent>

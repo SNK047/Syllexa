@@ -10,18 +10,18 @@ export async function chatWithNote(
   const supabase = await createClient();
   if (!supabase) return { error: "Supabase not configured" };
 
-  // Get note content
-  const { data: note } = await supabase
-    .from("notes")
-    .select("content_text, title")
-    .eq("id", noteId)
-    .single();
-
-  if (!note?.content_text) {
-    return { error: "Note content not available for chat" };
-  }
-
   try {
+    // Get note content
+    const { data: note } = await supabase
+      .from("notes")
+      .select("content_text, title")
+      .eq("id", noteId)
+      .single();
+
+    if (!note?.content_text) {
+      return { error: "Note content not available. The PDF text has not been extracted yet." };
+    }
+
     // Get relevant context using RAG
     const lastUserMsg = messages.filter((m) => m.role === "user").pop();
     const context = lastUserMsg
@@ -32,7 +32,15 @@ export async function chatWithNote(
     const response = await generateChatResponse(messages, context);
     return { data: response };
   } catch (err: any) {
-    return { error: err.message || "AI service error" };
+    console.error("AI chat error:", err);
+    const msg = err.message || "AI service error";
+    if (msg.includes("GOOGLE_AI_STUDIO_KEY") || msg.includes("not configured")) {
+      return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
+    }
+    if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
+      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in environment variables." };
+    }
+    return { error: `AI error: ${msg}` };
   }
 }
 
@@ -43,7 +51,15 @@ export async function chatGeneral(
     const response = await generateChatResponse(messages);
     return { data: response };
   } catch (err: any) {
-    return { error: err.message || "AI service error" };
+    console.error("AI chat error:", err);
+    const msg = err.message || "AI service error";
+    if (msg.includes("GOOGLE_AI_STUDIO_KEY") || msg.includes("not configured")) {
+      return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
+    }
+    if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
+      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in environment variables." };
+    }
+    return { error: `AI error: ${msg}` };
   }
 }
 
@@ -51,15 +67,17 @@ export async function saveConversation(noteId: string, messages: any[]) {
   const supabase = await createClient();
   if (!supabase) return;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const { ensureUser } = await import("@/actions/ensure-user");
+    const user = await ensureUser();
+    if (!user) return;
 
-  if (!user) return;
-
-  await supabase.from("ai_conversations").insert({
-    user_id: user.id,
-    note_id: noteId,
-    messages,
-  });
+    await supabase.from("ai_conversations").insert({
+      user_id: user.id,
+      note_id: noteId,
+      messages,
+    });
+  } catch {
+    // Silently fail for conversation saving
+  }
 }

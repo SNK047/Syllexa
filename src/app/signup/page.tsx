@@ -58,6 +58,18 @@ export default function SignupPage() {
       return;
     }
 
+    // Auto-create user row
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("users").upsert({
+        id: user.id,
+        email: user.email || email,
+        name,
+        credits: 100,
+        streak: 0,
+      }, { onConflict: "id" });
+    }
+
     router.push("/dashboard");
     router.refresh();
   }
@@ -138,14 +150,24 @@ export default function SignupPage() {
                 <SelectValue placeholder="Select your university" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="anna-university">
-                  Anna University
-                </SelectItem>
-                <SelectItem value="vtu">VTU</SelectItem>
-                <SelectItem value="mumbai-university">
-                  University of Mumbai
-                </SelectItem>
-                <SelectItem value="du">Delhi University</SelectItem>
+                <SelectItem value="anna-university">Anna University</SelectItem>
+                <SelectItem value="anna-chennai-rc">Anna University - Chennai RC</SelectItem>
+                <SelectItem value="anna-trichy-rc">Anna University - Trichy RC</SelectItem>
+                <SelectItem value="anna-coimbatore-rc">Anna University - Coimbatore RC</SelectItem>
+                <SelectItem value="anna-madurai-rc">Anna University - Madurai RC</SelectItem>
+                <SelectItem value="university-of-madras">University of Madras</SelectItem>
+                <SelectItem value="bharathidasan-university">Bharathidasan University</SelectItem>
+                <SelectItem value="madurai-kamaraj-university">Madurai Kamaraj University</SelectItem>
+                <SelectItem value="alagappa-university">Alagappa University</SelectItem>
+                <SelectItem value="bharathiar-university">Bharathiar University</SelectItem>
+                <SelectItem value="periyar-university">Periyar University</SelectItem>
+                <SelectItem value="manonmaniam-sundaranar-university">Manonmaniam Sundaranar University</SelectItem>
+                <SelectItem value="vit">VIT</SelectItem>
+                <SelectItem value="srm">SRM Institute of Science and Technology</SelectItem>
+                <SelectItem value="amrita">Amrita Vishwa Vidyapeetham</SelectItem>
+                <SelectItem value="sastra">SASTRA University</SelectItem>
+                <SelectItem value="saveetha">Saveetha University</SelectItem>
+                <SelectItem value="ssn">SSN College of Engineering</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>

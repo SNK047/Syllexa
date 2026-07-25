@@ -67,29 +67,22 @@ export default function DashboardLayout({
     setMounted(true);
     async function loadUser() {
       try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        if (!supabase) return;
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) {
-          setUserName(
-            user.user_metadata?.name || user.email?.split("@")[0] || "User"
-          );
-          const { data: userData } = await supabase
-            .from("users")
-            .select("credits")
-            .eq("id", user.id)
-            .single();
-          if (userData) setUserCredits(userData.credits);
+        const { ensureUser } = await import("@/actions/ensure-user");
+        const userData = await ensureUser();
+        if (userData) {
+          setUserName(userData.name || "User");
+          setUserCredits(userData.credits || 0);
 
-          const { count } = await supabase
-            .from("notifications")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .eq("read", false);
-          setUnreadCount(count || 0);
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          if (supabase) {
+            const { count } = await supabase
+              .from("notifications")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", userData.id)
+              .eq("read", false);
+            setUnreadCount(count || 0);
+          }
         }
       } catch {
         // Supabase not configured
