@@ -370,11 +370,13 @@ CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USI
 CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own notifications" ON notifications FOR DELETE USING (auth.uid() = user_id);
 
--- Credits log: only own
+-- Credits log: own data
 CREATE POLICY "Users can view own credits" ON credits_log FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own credits" ON credits_log FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Activity logs: viewable by everyone
 CREATE POLICY "Activity logs are viewable by everyone" ON activity_logs FOR SELECT USING (true);
+CREATE POLICY "Users can insert activity logs" ON activity_logs FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- AI conversations: only own
 CREATE POLICY "Users can view own conversations" ON ai_conversations FOR SELECT USING (auth.uid() = user_id);

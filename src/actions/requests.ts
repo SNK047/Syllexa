@@ -214,8 +214,12 @@ export async function fulfillRequest(requestId: string, noteId: string) {
 
   if (error) return { error: error.message };
 
-  const { addCredits } = await import("@/actions/credits");
-  await addCredits(request.reward_credits || 20, "fulfill_request", "Fulfilled a note request");
+  try {
+    const { addCredits } = await import("@/actions/credits");
+    await addCredits(request.reward_credits || 20, "fulfill_request", "Fulfilled a note request");
+  } catch {
+    // Credits is non-critical, don't block fulfillment
+  }
 
   return { error: null };
 }
