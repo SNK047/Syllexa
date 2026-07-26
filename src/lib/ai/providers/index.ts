@@ -1,11 +1,15 @@
 import type { AIProvider } from "./types";
 import { createDeepSeekProvider } from "./deepseek";
+import { createXAIProvider } from "./xai";
 
 let providers: AIProvider[] | null = null;
 
 export function getProviders(): AIProvider[] {
   if (providers) return providers;
-  providers = [createDeepSeekProvider()].filter(Boolean) as AIProvider[];
+  providers = [
+    createDeepSeekProvider(),
+    createXAIProvider(),
+  ].filter(Boolean) as AIProvider[];
   return providers;
 }
 

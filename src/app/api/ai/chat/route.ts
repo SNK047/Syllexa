@@ -6,7 +6,7 @@ export const runtime = "edge";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, model, temperature, maxTokens, systemPrompt } = body;
+    const { messages, provider: providerId, model, temperature, maxTokens, systemPrompt } = body;
 
     if (!model || !messages?.length) {
       return new Response(
@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const provider = getProvider("deepseek");
+    const provider = getProvider(providerId || "deepseek");
     if (!provider) {
       return new Response(
-        JSON.stringify({ error: "DeepSeek API key not configured. Add DEEPSEEK_API_KEY to environment variables." }),
+        JSON.stringify({ error: "AI provider not configured. Add DEEPSEEK_API_KEY or XAI_API_KEY to environment variables." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

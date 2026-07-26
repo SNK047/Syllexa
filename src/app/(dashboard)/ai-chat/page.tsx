@@ -23,6 +23,7 @@ import {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  provider?: string;
   model?: string;
 }
 
@@ -33,32 +34,21 @@ interface ConversationEntry {
   messageCount: number;
 }
 
-interface ModelInfo {
+interface ProviderModel {
   id: string;
   name: string;
+  provider: string;
+  providerName: string;
+  providerColor: string;
   speed: "fast" | "medium" | "slow";
   description: string;
   pricing: string;
   contextWindow: number;
 }
 
-const MODELS: ModelInfo[] = [
-  {
-    id: "deepseek-v4-flash",
-    name: "V4 Flash",
-    speed: "fast",
-    description: "Fast & accurate. Best for quick questions, code, and general study help.",
-    pricing: "$0.14/$0.28 per 1M tokens",
-    contextWindow: 1048576,
-  },
-  {
-    id: "deepseek-v4-pro",
-    name: "V4 Pro",
-    speed: "medium",
-    description: "DeepSeek flagship. Best for complex reasoning, research, and difficult problems.",
-    pricing: "$0.44/$0.87 per 1M tokens",
-    contextWindow: 1048576,
-  },
+const PROVIDERS = [
+  { id: "deepseek", name: "DeepSeek", color: "#4F6BF6", icon: "DS" },
+  { id: "xai", name: "Grok (xAI)", color: "#1DA1F2", icon: "X" },
 ];
 
 const SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
@@ -84,6 +74,9 @@ SUBJECTS YOU EXCEL AT:
 Be helpful, encouraging, and educational. Students are here to learn — help them understand, not just memorize.`;
 
 export default function AIChatPage() {
+  const [providers, setProviders] = useState<{ id: string; name: string; color: string; isAvailable: boolean }[]>([]);
+  const [allModels, setAllModels] = useState<ProviderModel[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>("deepseek");
   const [selectedModel, setSelectedModel] = useState<string>("deepseek-v4-flash");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -106,9 +99,24 @@ export default function AIChatPage() {
   }, [messages, loading]);
 
   useEffect(() => {
+    loadProviders();
     loadCredits();
     loadHistory();
   }, []);
+
+  async function loadProviders() {
+    try {
+      const res = await fetch("/api/ai/chat");
+      const data = await res.json();
+      setProviders(data.providers || []);
+      setAllModels(data.models || []);
+      if (data.models?.length > 0) {
+        const first = data.models[0];
+        setSelectedProvider(first.provider);
+        setSelectedModel(first.id);
+      }
+    } catch {}
+  }
 
   async function loadCredits() {
     try {
@@ -186,7 +194,15 @@ export default function AIChatPage() {
     if (messages.length > 0) scheduleSave();
   }, [messages]);
 
-  const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
+  const providerModels = allModels.filter((m) => m.provider === selectedProvider);
+  const currentModel = allModels.find((m) => m.id === selectedModel && m.provider === selectedProvider);
+  const currentProvider = PROVIDERS.find((p) => p.id === selectedProvider) || PROVIDERS[0];
+
+  function handleProviderChange(providerId: string) {
+    setSelectedProvider(providerId);
+    const models = allModels.filter((m) => m.provider === providerId);
+    if (models.length > 0) setSelectedModel(models[0].id);
+  }
 
   async function handleSend() {
     if (!input.trim() || loading) return;
@@ -199,7 +215,7 @@ export default function AIChatPage() {
     const assistantIdx = messages.length + 1;
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", content: "", model: selectedModel },
+      { role: "assistant", content: "", provider: selectedProvider, model: selectedModel },
     ]);
 
     try {
@@ -211,6 +227,7 @@ export default function AIChatPage() {
             role: m.role,
             content: m.content,
           })),
+          provider: selectedProvider,
           model: selectedModel,
           temperature: 0.7,
           maxTokens: 4096,
@@ -257,7 +274,7 @@ export default function AIChatPage() {
       if (!fullText) {
         setMessages((prev) => {
           const updated = [...prev];
-          updated[assistantIdx] = { ...updated[assistantIdx], content: "No response received. Please check that DEEPSEEK_API_KEY is configured." };
+          updated[assistantIdx] = { ...updated[assistantIdx], content: "No response received. Check that your API key is configured and has balance." };
           return updated;
         });
       }
@@ -334,7 +351,7 @@ export default function AIChatPage() {
         </div>
       </div>
 
-      {/* Toggle History Button */}
+      {/* Toggle History */}
       <button
         onClick={() => setHistoryOpen(!historyOpen)}
         className="shrink-0 w-5 flex items-center justify-center border-r border-border/50 bg-card hover:bg-muted transition-colors"
@@ -352,50 +369,74 @@ export default function AIChatPage() {
               AI Chat
             </h1>
             <p className="text-muted-foreground text-xs">
-              Powered by DeepSeek V4
+              {providers.length} provider{providers.length !== 1 ? "s" : ""} &middot; {allModels.length} models
               {autoSaving && <span className="ml-2 text-muted-foreground/50">saving...</span>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">{credits} credits</Badge>
-          </div>
+          <Badge variant="outline" className="text-xs">{credits} credits</Badge>
         </div>
 
-        {/* Model Selector */}
-        <div className="flex gap-2 mb-3">
-          {MODELS.map((model) => {
-            const isActive = selectedModel === model.id;
+        {/* Provider Tabs */}
+        <div className="flex gap-1.5 mb-2">
+          {PROVIDERS.map((prov) => {
+            const isActive = selectedProvider === prov.id;
+            const available = providers.find((p) => p.id === prov.id)?.isAvailable;
             return (
               <button
-                key={model.id}
-                onClick={() => setSelectedModel(model.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border ${
+                key={prov.id}
+                onClick={() => handleProviderChange(prov.id)}
+                disabled={!available}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                   isActive
-                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                    : "bg-card text-muted-foreground border-border/50 hover:bg-muted hover:text-foreground"
-                }`}
+                    ? "border-primary/30 text-primary"
+                    : "border-border/50 text-muted-foreground hover:bg-muted"
+                } ${!available ? "opacity-40 cursor-not-allowed" : ""}`}
+                style={isActive ? { backgroundColor: `${prov.color}15` } : {}}
               >
-                {model.speed === "fast" ? <Zap className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                <span>{model.name}</span>
-                <span className="text-[10px] opacity-60">{model.pricing}</span>
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: available ? prov.color : "#a3a3a3" }}
+                />
+                {prov.name}
               </button>
             );
           })}
         </div>
 
-        {/* Chat Area */}
+        {/* Model Selector */}
+        <div className="flex gap-1.5 mb-3 flex-wrap">
+          {providerModels.map((model) => {
+            const isActive = selectedModel === model.id;
+            return (
+              <button
+                key={model.id}
+                onClick={() => setSelectedModel(model.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${
+                  isActive
+                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                    : "bg-card text-muted-foreground border-border/50 hover:bg-muted"
+                }`}
+              >
+                {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                <span>{model.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Chat */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 rounded-xl border border-border/50 bg-card flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4 max-w-3xl mx-auto">
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4 bg-primary/10">
-                      <Bot className="h-8 w-8 text-primary" />
+                    <div className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: `${currentProvider.color}15` }}>
+                      <Bot className="h-8 w-8" style={{ color: currentProvider.color }} />
                     </div>
                     <p className="text-lg font-medium mb-1">Chat with Syllexa AI</p>
                     <p className="text-sm text-muted-foreground max-w-md mb-6">
-                      Powered by {currentModel.name}. Ask me anything about your university subjects — DSA, OS, DBMS, Networks, Math, and more.
+                      Powered by {currentProvider.name} {currentModel?.name || ""}. Ask me anything — DSA, OS, DBMS, Networks, Math, and more.
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center">
                       {["Explain binary search trees", "Write a Python merge sort", "TCP vs UDP differences", "What is recursion?"].map((q) => (
@@ -410,8 +451,8 @@ export default function AIChatPage() {
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                     {msg.role === "assistant" && (
-                      <div className="size-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
-                        <Bot className="h-4 w-4 text-primary" />
+                      <div className="size-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${currentProvider.color}15` }}>
+                        <Bot className="h-4 w-4" style={{ color: currentProvider.color }} />
                       </div>
                     )}
                     <div
@@ -474,9 +515,11 @@ export default function AIChatPage() {
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </Button>
             </form>
-            <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-              {currentModel.name} &middot; 1M context &middot; {currentModel.pricing}
-            </p>
+            {currentModel && (
+              <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
+                {currentProvider.name} &middot; {currentModel.name} &middot; {(currentModel.contextWindow / 1000).toFixed(0)}K context &middot; {currentModel.pricing}
+              </p>
+            )}
           </div>
         </div>
       </div>
