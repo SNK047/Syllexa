@@ -15,6 +15,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanMessages = messages.map((m: any) => {
+      if (typeof m.content === "string") return m;
+      if (Array.isArray(m.content)) {
+        const textParts = m.content.filter((p: any) => p.type === "text");
+        return { ...m, content: textParts.map((p: any) => p.text).join("") || "" };
+      }
+      return m;
+    }).filter((m: any) => m.content);
+
     const provider = getProvider("qwen");
     if (!provider) {
       return new Response(
@@ -27,7 +36,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of provider.chat(messages, model, {
+          for await (const chunk of provider.chat(cleanMessages, model, {
             temperature,
             maxTokens,
             systemPrompt,
