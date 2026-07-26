@@ -265,6 +265,14 @@ export default function AIChatPage() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = Array.from(e.clipboardData.items);
+    const hasImage = items.some((item) => item.type.startsWith("image/"));
+    if (hasImage) {
+      e.preventDefault();
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-6rem)]">
       {/* History Sidebar */}
@@ -378,7 +386,7 @@ export default function AIChatPage() {
         <div className="mt-3">
           <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 items-end">
             <div className="flex-1">
-              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
+              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste}
                 placeholder="Ask Syllexa AI anything about your subjects..." disabled={loading} rows={1}
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[48px] max-h-[120px]"
                 style={{ height: "auto" }}

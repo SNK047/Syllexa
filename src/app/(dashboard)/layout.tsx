@@ -26,7 +26,6 @@ import {
   Trophy,
   Bell,
   Bookmark,
-  Shield,
   Settings,
   Sparkles,
   LogOut,
@@ -47,7 +46,6 @@ const navItems = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/admin", label: "Admin", icon: Shield },
 ];
 
 export default function DashboardLayout({
