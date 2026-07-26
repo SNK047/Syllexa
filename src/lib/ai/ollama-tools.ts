@@ -1,4 +1,4 @@
-const OLLAMA_API_URL = "https://ollama.com/v1/chat/completions";
+const OLLAMA_API_URL = "https://ollama.com/api/chat";
 
 const STUDY_SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
 
@@ -37,8 +37,8 @@ async function callOllama(
     body: JSON.stringify({
       model,
       messages,
-      temperature: 0.7,
-      max_tokens: 4096,
+      stream: false,
+      options: { temperature: 0.7, num_predict: 4096 },
     }),
   });
 
@@ -48,7 +48,7 @@ async function callOllama(
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || "No response generated.";
+  return data.message?.content || "No response generated.";
 }
 
 export async function generateChatResponse(
@@ -80,8 +80,8 @@ export async function generateChatResponse(
     body: JSON.stringify({
       model: model || "gpt-oss:20b",
       messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 4096,
+      stream: false,
+      options: { temperature: 0.7, num_predict: 4096 },
     }),
   });
 
@@ -91,7 +91,7 @@ export async function generateChatResponse(
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || "No response generated.";
+  return data.message?.content || "No response generated.";
 }
 
 export async function generateFlashcards(

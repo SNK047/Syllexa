@@ -12,16 +12,14 @@ interface ConversationEntry { id: string; title: string; created_at: string; mes
 interface ModelInfo { id: string; name: string; speed: "fast" | "medium" | "slow"; description: string; contextWindow: number }
 
 const MODELS: ModelInfo[] = [
-  { id: "gpt-oss:120b", name: "GPT-OSS 120B", speed: "medium", description: "Best general-purpose model", contextWindow: 131072 },
-  { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", speed: "medium", description: "Excellent for reasoning & math", contextWindow: 131072 },
-  { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", speed: "fast", description: "Fast with good accuracy", contextWindow: 131072 },
-  { id: "qwen3.5:397b", name: "Qwen 3.5 397B", speed: "slow", description: "Massive 397B, best for complex tasks", contextWindow: 131072 },
-  { id: "kimi-k2.7-code", name: "Kimi K2.7 Code", speed: "medium", description: "Best for programming", contextWindow: 131072 },
-  { id: "kimi-k2.6", name: "Kimi K2.6", speed: "medium", description: "Strong reasoning", contextWindow: 131072 },
   { id: "gpt-oss:20b", name: "GPT-OSS 20B", speed: "fast", description: "Lightweight, fast responses", contextWindow: 131072 },
+  { id: "gpt-oss:120b", name: "GPT-OSS 120B", speed: "medium", description: "Best general-purpose model", contextWindow: 131072 },
   { id: "nemotron-3-ultra", name: "Nemotron 3 Ultra", speed: "medium", description: "NVIDIA's deep reasoning model", contextWindow: 131072 },
-  { id: "mistral-large-3:675b", name: "Mistral Large 3", speed: "slow", description: "675B, excellent multilingual", contextWindow: 131072 },
-  { id: "glm-5.2", name: "GLM 5.2", speed: "medium", description: "Zhipu AI, strong at reasoning", contextWindow: 131072 },
+  { id: "nemotron-3-super", name: "Nemotron 3 Super", speed: "fast", description: "Balanced speed and quality", contextWindow: 131072 },
+  { id: "nemotron-3-nano:30b", name: "Nemotron 3 Nano", speed: "fast", description: "Fastest for simple tasks", contextWindow: 131072 },
+  { id: "gemma4:31b", name: "Gemma 4 31B", speed: "medium", description: "Google's open model", contextWindow: 131072 },
+  { id: "minimax-m3", name: "MiniMax M3", speed: "slow", description: "Long-context specialist", contextWindow: 131072 },
+  { id: "minimax-m2.5", name: "MiniMax M2.5", speed: "medium", description: "Balanced general use", contextWindow: 131072 },
 ];
 
 const SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
@@ -231,7 +229,7 @@ export default function AIChatPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> AI Chat</h1>
-            <p className="text-muted-foreground text-xs">Powered by Ollama Cloud &middot; 10 models{autoSaving && " &middot; saving..."}</p>
+            <p className="text-muted-foreground text-xs">Powered by Ollama Cloud &middot; 8 models{autoSaving && " &middot; saving..."}</p>
           </div>
           <Badge variant="outline" className="text-xs">{credits} credits</Badge>
         </div>
