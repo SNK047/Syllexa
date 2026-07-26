@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface HierarchyData {
   universities: any[];
@@ -59,9 +60,7 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
 
   useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
-  useEffect(() => {
-    loadUniversities();
-  }, []);
+  useEffect(() => { loadUniversities(); }, []);
 
   useEffect(() => {
     if (selected.universityId) {
@@ -96,103 +95,80 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
   }, [selected.subjectId]);
 
   useEffect(() => {
-    if (selected.unitId) {
-      onSelect(selected);
-    }
+    if (selected.unitId) onSelect(selected);
   }, [selected.unitId]);
 
   async function loadUniversities() {
     setLoading((l) => ({ ...l, universities: true }));
-    setErrors((e) => ({ ...e, universities: "" }));
     try {
-      const { getUniversities } = await import("@/actions/hierarchy");
-      const result = await getUniversities();
+      const supabase = createClient();
+      const { data, error } = await supabase.from("universities").select("*").order("name");
       if (!mountedRef.current) return;
-      if (result.error) {
-        setErrors((e) => ({ ...e, universities: result.error }));
-        setData((d) => ({ ...d, universities: [] }));
-      } else {
-        setData((d) => ({ ...d, universities: result.data || [] }));
-      }
-    } catch (err) {
+      if (error) throw error;
+      setData((d) => ({ ...d, universities: data || [] }));
+    } catch (err: any) {
       if (!mountedRef.current) return;
-      setErrors((e) => ({ ...e, universities: "Failed to load universities" }));
+      setErrors((e) => ({ ...e, universities: err?.message || "Failed to load" }));
     }
     setLoading((l) => ({ ...l, universities: false }));
   }
 
   async function loadDepartments(universityId: string) {
     setLoading((l) => ({ ...l, departments: true }));
-    setErrors((e) => ({ ...e, departments: "" }));
     try {
-      const { getDepartments } = await import("@/actions/hierarchy");
-      const result = await getDepartments(universityId);
+      const supabase = createClient();
+      const { data, error } = await supabase.from("departments").select("*").eq("university_id", universityId).order("name");
       if (!mountedRef.current) return;
-      if (result.error) {
-        setErrors((e) => ({ ...e, departments: result.error }));
-      } else {
-        setData((d) => ({ ...d, departments: result.data || [] }));
-      }
-    } catch (err) {
+      if (error) throw error;
+      setData((d) => ({ ...d, departments: data || [] }));
+    } catch (err: any) {
       if (!mountedRef.current) return;
-      setErrors((e) => ({ ...e, departments: "Failed to load departments" }));
+      setErrors((e) => ({ ...e, departments: err?.message || "Failed to load" }));
     }
     setLoading((l) => ({ ...l, departments: false }));
   }
 
   async function loadSemesters(departmentId: string) {
     setLoading((l) => ({ ...l, semesters: true }));
-    setErrors((e) => ({ ...e, semesters: "" }));
     try {
-      const { getSemesters } = await import("@/actions/hierarchy");
-      const result = await getSemesters(departmentId);
+      const supabase = createClient();
+      const { data, error } = await supabase.from("semesters").select("*").eq("department_id", departmentId).order("number");
       if (!mountedRef.current) return;
-      if (result.error) {
-        setErrors((e) => ({ ...e, semesters: result.error }));
-      } else {
-        setData((d) => ({ ...d, semesters: result.data || [] }));
-      }
-    } catch (err) {
+      if (error) throw error;
+      setData((d) => ({ ...d, semesters: data || [] }));
+    } catch (err: any) {
       if (!mountedRef.current) return;
-      setErrors((e) => ({ ...e, semesters: "Failed to load semesters" }));
+      setErrors((e) => ({ ...e, semesters: err?.message || "Failed to load" }));
     }
     setLoading((l) => ({ ...l, semesters: false }));
   }
 
   async function loadSubjects(semesterId: string) {
     setLoading((l) => ({ ...l, subjects: true }));
-    setErrors((e) => ({ ...e, subjects: "" }));
     try {
-      const { getSubjects } = await import("@/actions/hierarchy");
-      const result = await getSubjects(semesterId);
+      const supabase = createClient();
+      const { data, error } = await supabase.from("subjects").select("*").eq("semester_id", semesterId).order("code");
       if (!mountedRef.current) return;
-      if (result.error) {
-        setErrors((e) => ({ ...e, subjects: result.error }));
-      } else {
-        setData((d) => ({ ...d, subjects: result.data || [] }));
-      }
-    } catch (err) {
+      if (error) throw error;
+      setData((d) => ({ ...d, subjects: data || [] }));
+    } catch (err: any) {
       if (!mountedRef.current) return;
-      setErrors((e) => ({ ...e, subjects: "Failed to load subjects" }));
+      setErrors((e) => ({ ...e, subjects: err?.message || "Failed to load" }));
     }
     setLoading((l) => ({ ...l, subjects: false }));
   }
 
   async function loadUnits(subjectId: string) {
     setLoading((l) => ({ ...l, units: true }));
-    setErrors((e) => ({ ...e, units: "" }));
     try {
-      const { getUnits } = await import("@/actions/hierarchy");
-      const result = await getUnits(subjectId);
+      const supabase = createClient();
+      const { data, error } = await supabase.from("units").select("*").eq("subject_id", subjectId).order("number");
       if (!mountedRef.current) return;
-      if (result.error) {
-        setErrors((e) => ({ ...e, units: result.error }));
-      } else {
-        setData((d) => ({ ...d, units: result.data || [] }));
-      }
-    } catch (err) {
+      if (error) throw error;
+      setData((d) => ({ ...d, units: data || [] }));
+    } catch (err: any) {
       if (!mountedRef.current) return;
-      setErrors((e) => ({ ...e, units: "Failed to load units" }));
+      setErrors((e) => ({ ...e, units: err?.message || "Failed to load" }));
     }
     setLoading((l) => ({ ...l, units: false }));
   }
@@ -207,7 +183,6 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
 
   return (
     <div className="space-y-4">
-      {/* University */}
       <div className="space-y-2">
         <Label>University *</Label>
         <div className="relative">
@@ -217,14 +192,10 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
             onChange={(e) => setSelected((s) => ({ ...s, universityId: e.target.value }))}
             disabled={loading.universities}
           >
-            <option value="">
-              {loading.universities ? "Loading universities..." : "Select university"}
-            </option>
-            {data.universities.map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
+            <option value="">{loading.universities ? "Loading universities..." : "Select university"}</option>
+            {data.universities.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
-          {loading.universities && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+          {loading.universities && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />}
         </div>
         {renderError("universities")}
         {!loading.universities && data.universities.length === 0 && !errors.universities && (
@@ -232,7 +203,6 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
         )}
       </div>
 
-      {/* Department */}
       {selected.universityId && (
         <div className="space-y-2">
           <Label>Department *</Label>
@@ -243,20 +213,15 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
               onChange={(e) => setSelected((s) => ({ ...s, departmentId: e.target.value }))}
               disabled={loading.departments}
             >
-              <option value="">
-                {loading.departments ? "Loading departments..." : "Select department"}
-              </option>
-              {data.departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
+              <option value="">{loading.departments ? "Loading departments..." : "Select department"}</option>
+              {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
-            {loading.departments && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            {loading.departments && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />}
           </div>
           {renderError("departments")}
         </div>
       )}
 
-      {/* Semester */}
       {selected.departmentId && (
         <div className="space-y-2">
           <Label>Semester *</Label>
@@ -267,20 +232,15 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
               onChange={(e) => setSelected((s) => ({ ...s, semesterId: e.target.value }))}
               disabled={loading.semesters}
             >
-              <option value="">
-                {loading.semesters ? "Loading semesters..." : "Select semester"}
-              </option>
-              {data.semesters.map((s) => (
-                <option key={s.id} value={s.id}>Semester {s.number}</option>
-              ))}
+              <option value="">{loading.semesters ? "Loading semesters..." : "Select semester"}</option>
+              {data.semesters.map((s) => <option key={s.id} value={s.id}>Semester {s.number}</option>)}
             </select>
-            {loading.semesters && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            {loading.semesters && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />}
           </div>
           {renderError("semesters")}
         </div>
       )}
 
-      {/* Subject */}
       {selected.semesterId && (
         <div className="space-y-2">
           <Label>Subject *</Label>
@@ -291,20 +251,15 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
               onChange={(e) => setSelected((s) => ({ ...s, subjectId: e.target.value }))}
               disabled={loading.subjects}
             >
-              <option value="">
-                {loading.subjects ? "Loading subjects..." : "Select subject"}
-              </option>
-              {data.subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
-              ))}
+              <option value="">{loading.subjects ? "Loading subjects..." : "Select subject"}</option>
+              {data.subjects.map((s) => <option key={s.id} value={s.id}>{s.code} - {s.name}</option>)}
             </select>
-            {loading.subjects && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            {loading.subjects && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />}
           </div>
           {renderError("subjects")}
         </div>
       )}
 
-      {/* Unit */}
       {selected.subjectId && (
         <div className="space-y-2">
           <Label>Unit *</Label>
@@ -315,14 +270,10 @@ export function HierarchySelector({ onSelect, initial }: HierarchySelectorProps)
               onChange={(e) => setSelected((s) => ({ ...s, unitId: e.target.value }))}
               disabled={loading.units}
             >
-              <option value="">
-                {loading.units ? "Loading units..." : "Select unit"}
-              </option>
-              {data.units.map((u) => (
-                <option key={u.id} value={u.id}>Unit {u.number} - {u.title}</option>
-              ))}
+              <option value="">{loading.units ? "Loading units..." : "Select unit"}</option>
+              {data.units.map((u) => <option key={u.id} value={u.id}>Unit {u.number} - {u.title}</option>)}
             </select>
-            {loading.units && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            {loading.units && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />}
           </div>
           {renderError("units")}
         </div>
