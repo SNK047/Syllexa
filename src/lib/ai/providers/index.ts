@@ -1,5 +1,4 @@
 import type { AIProvider } from "./types";
-import { createGeminiProvider } from "./gemini";
 import { createOpenRouterProvider } from "./openrouter";
 import { createGroqProvider } from "./groq";
 import { createHuggingFaceProvider } from "./huggingface";
@@ -11,7 +10,6 @@ export function getProviders(): AIProvider[] {
   if (providers) return providers;
 
   providers = [
-    createGeminiProvider(),
     createOpenRouterProvider(),
     createGroqProvider(),
     createHuggingFaceProvider(),

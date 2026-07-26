@@ -58,7 +58,6 @@ interface ModelInfo {
 }
 
 const PROVIDER_ICONS: Record<string, any> = {
-  gemini: Sparkles,
   openrouter: Globe,
   groq: Zap,
   huggingface: Heart,

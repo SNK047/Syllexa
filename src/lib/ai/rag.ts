@@ -1,5 +1,3 @@
-import { generateWithGemini } from "./gemini";
-
 export interface SearchResult {
   text: string;
   score: number;
@@ -20,55 +18,18 @@ export function chunkText(text: string, chunkSize: number = 1000, overlap: numbe
   return chunks;
 }
 
-export async function embedTexts(texts: string[]): Promise<number[][]> {
-  const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
-  if (!apiKey) throw new Error("GOOGLE_AI_STUDIO_KEY not configured");
+export function simpleSearch(query: string, chunks: string[], topK: number = 5): SearchResult[] {
+  const queryTerms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requests: texts.map((text) => ({
-          model: "models/text-embedding-004",
-          content: { parts: [{ text }] },
-        })),
-      }),
+  const scored = chunks.map((text, i) => {
+    const lowerText = text.toLowerCase();
+    let score = 0;
+    for (const term of queryTerms) {
+      const matches = (lowerText.match(new RegExp(term, "g")) || []).length;
+      score += matches;
     }
-  );
-
-  const data = await response.json();
-  return data.embeddings?.map((e: any) => e.values) || [];
-}
-
-export function cosineSimilarity(a: number[], b: number[]): number {
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-export async function searchChunks(
-  query: string,
-  chunks: string[],
-  embeddings: number[][],
-  topK: number = 5
-): Promise<SearchResult[]> {
-  const queryEmbedding = await embedTexts([query]);
-  if (!queryEmbedding.length) return [];
-
-  const queryVec = queryEmbedding[0];
-  const scored = chunks.map((text, i) => ({
-    text,
-    score: cosineSimilarity(queryVec, embeddings[i] || []),
-    chunkIndex: i,
-  }));
+    return { text, score, chunkIndex: i };
+  });
 
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, topK);
@@ -81,12 +42,12 @@ export async function getContextForQuery(
   const chunks = chunkText(noteContent);
   if (chunks.length === 0) return noteContent;
 
-  try {
-    const embeddings = await embedTexts(chunks);
-    const results = await searchChunks(query, chunks, embeddings, 5);
-    return results.map((r) => r.text).join("\n\n---\n\n");
-  } catch {
-    // Fallback: return first few chunks
-    return chunks.slice(0, 3).join("\n\n---\n\n");
+  const results = simpleSearch(query, chunks, 5);
+  const relevant = results.filter((r) => r.score > 0);
+
+  if (relevant.length > 0) {
+    return relevant.map((r) => r.text).join("\n\n---\n\n");
   }
+
+  return chunks.slice(0, 3).join("\n\n---\n\n");
 }

@@ -33,11 +33,8 @@ export async function chatWithNote(
   } catch (err: any) {
     console.error("AI chat error:", err);
     const msg = err.message || "AI service error";
-    if (msg.includes("GOOGLE_AI_STUDIO_KEY") || msg.includes("not configured")) {
-      return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
-    }
-    if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
-      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in Vercel environment variables." };
+    if (msg.includes("not configured")) {
+      return { error: "AI service is not configured. Please add OPENROUTER_API_KEY to environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }
@@ -52,11 +49,8 @@ export async function chatGeneral(
   } catch (err: any) {
     console.error("AI chat error:", err);
     const msg = err.message || "AI service error";
-    if (msg.includes("GOOGLE_AI_STUDIO_KEY") || msg.includes("not configured")) {
-      return { error: "AI service is not configured. Please add your GOOGLE_AI_STUDIO_KEY to environment variables." };
-    }
-    if (msg.includes("API key not valid") || msg.includes("PERMISSION_DENIED")) {
-      return { error: "Invalid API key. Please check your GOOGLE_AI_STUDIO_KEY in Vercel environment variables." };
+    if (msg.includes("not configured")) {
+      return { error: "AI service is not configured. Please add OPENROUTER_API_KEY to environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }
