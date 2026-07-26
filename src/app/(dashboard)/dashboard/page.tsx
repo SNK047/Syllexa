@@ -13,6 +13,7 @@ import {
   Coins,
   Flame,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -134,6 +135,13 @@ export default function DashboardPage() {
               icon={<Trophy className="h-6 w-6" />}
               title="Leaderboard"
               description="See top contributors"
+            />
+          </Link>
+          <Link href="/ai-chat">
+            <QuickActionCard
+              icon={<Sparkles className="h-6 w-6" />}
+              title="Chat with AI"
+              description="Ask questions about your notes"
             />
           </Link>
         </div>
