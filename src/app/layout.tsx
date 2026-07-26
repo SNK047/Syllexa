@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Syllexa - AI-Powered Note Sharing Platform",
   description:
     "Connect with the exact notes you need. AI-powered learning platform for university students.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
