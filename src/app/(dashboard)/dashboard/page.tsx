@@ -129,11 +129,11 @@ export default function DashboardPage() {
               description="Find the notes you need"
             />
           </Link>
-          <Link href="/ai-chat">
+          <Link href="/leaderboard">
             <QuickActionCard
-              icon={<BookOpen className="h-6 w-6" />}
-              title="Chat with AI"
-              description="Ask questions about your notes"
+              icon={<Trophy className="h-6 w-6" />}
+              title="Leaderboard"
+              description="See top contributors"
             />
           </Link>
         </div>

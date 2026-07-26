@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AITools } from "@/components/ai/ai-tools";
 import { Comments } from "@/components/comments/comments";
 import { Ratings } from "@/components/ratings/ratings";
-import { ArrowLeft, Download, Star, Clock, FileText, Loader2, Sparkles, MessageSquare, Bookmark } from "lucide-react";
+import { ArrowLeft, Download, Star, Clock, FileText, Loader2, Bookmark } from "lucide-react";
 import Link from "next/link";
 
 export default function NoteDetailPage() {
@@ -113,12 +112,6 @@ export default function NoteDetailPage() {
           <Download className="h-4 w-4 mr-2" />
           Download PDF
         </Button>
-        <Link href={`/ai-chat?note=${note.id}`}>
-          <Button variant="outline">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Chat with this note
-          </Button>
-        </Link>
         <Button variant={bookmarked ? "default" : "outline"} onClick={toggleBookmark}>
           <Bookmark className={`h-4 w-4 mr-2 ${bookmarked ? "fill-current" : ""}`} />
           {bookmarked ? "Bookmarked" : "Bookmark"}
@@ -131,12 +124,8 @@ export default function NoteDetailPage() {
             <FileText className="h-4 w-4 mr-1" />
             Document
           </TabsTrigger>
-          <TabsTrigger value="ai">
-            <Sparkles className="h-4 w-4 mr-1" />
-            AI Tools
-          </TabsTrigger>
           <TabsTrigger value="comments">
-            <MessageSquare className="h-4 w-4 mr-1" />
+            <FileText className="h-4 w-4 mr-1" />
             Comments
           </TabsTrigger>
           <TabsTrigger value="ratings">
@@ -155,10 +144,6 @@ export default function NoteDetailPage() {
               />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="ai">
-          <AITools noteId={note.id} noteTitle={note.title} />
         </TabsContent>
 
         <TabsContent value="comments">
