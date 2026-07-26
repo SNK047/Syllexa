@@ -9,7 +9,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Syllexa" className="h-8 w-8 rounded" />
+            <img src="/logox.jpg" alt="Syllexa" className="h-8 w-8 rounded" />
             <span className="text-xl font-bold">Syllexa</span>
           </Link>
           <div className="flex items-center gap-3">

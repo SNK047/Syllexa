@@ -114,7 +114,7 @@ export default function DashboardLayout({
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:border-r lg:border-border/50 bg-sidebar">
         <div className="flex items-center gap-2 px-6 h-16 border-b border-border/50">
-          <img src="/logo.png" alt="Syllexa" className="h-7 w-7 rounded" />
+          <img src="/logox.jpg" alt="Syllexa" className="h-7 w-7 rounded" />
           <span className="text-lg font-bold">Syllexa</span>
         </div>
 
@@ -172,7 +172,7 @@ export default function DashboardLayout({
             <SheetContent side="left" className="w-64 p-0">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <div className="flex items-center gap-2 px-6 h-16 border-b border-border/50">
-                <img src="/logo.png" alt="Syllexa" className="h-7 w-7 rounded" />
+                <img src="/logox.jpg" alt="Syllexa" className="h-7 w-7 rounded" />
                 <span className="text-lg font-bold">Syllexa</span>
               </div>
               <nav className="px-3 py-4 space-y-1">
@@ -205,7 +205,7 @@ export default function DashboardLayout({
           </Sheet>
 
           <div className="flex items-center gap-2 lg:hidden">
-            <img src="/logo.png" alt="Syllexa" className="h-6 w-6 rounded" />
+            <img src="/logox.jpg" alt="Syllexa" className="h-6 w-6 rounded" />
             <span className="font-bold">Syllexa</span>
           </div>
 

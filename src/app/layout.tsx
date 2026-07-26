@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Connect with the exact notes you need. AI-powered learning platform for university students.",
   icons: {
-    icon: "/logo.png",
+    icon: "/logox.jpg",
   },
 };
 

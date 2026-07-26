@@ -92,7 +92,7 @@ export default function SignupPage() {
             href="/"
             className="inline-flex items-center gap-2 text-primary mb-4"
           >
-            <img src="/logo.png" alt="Syllexa" className="h-10 w-10 rounded-lg" />
+            <img src="/logox.jpg" alt="Syllexa" className="h-10 w-10 rounded-lg" />
           </Link>
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-muted-foreground text-sm">
