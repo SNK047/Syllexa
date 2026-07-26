@@ -2,64 +2,40 @@ import type { AIProvider, AIModel, ChatMessage } from "./types";
 
 const HF_MODELS: AIModel[] = [
   {
-    id: "Qwen/Qwen3-235B-A22B",
-    name: "Qwen 3 235B",
-    provider: "huggingface",
-    speed: "medium",
-    contextWindow: 131072,
-    maxOutput: 8192,
-    supportsImages: false,
-    supportsCode: true,
-    description: "Alibaba's flagship MoE model. Excellent multilingual and coding.",
-    pricing: "Free (rate limited)",
-  },
-  {
     id: "meta-llama/Llama-3.3-70B-Instruct",
     name: "Llama 3.3 70B",
     provider: "huggingface",
     speed: "medium",
     contextWindow: 131072,
-    maxOutput: 8192,
+    maxOutput: 4096,
     supportsImages: false,
     supportsCode: true,
-    description: "Meta's latest open Llama. Strong general performance.",
-    pricing: "Free (rate limited)",
+    description: "Meta's Llama. General purpose, multilingual.",
+    pricing: "Free",
   },
   {
-    id: "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
-    name: "Mistral Small 3.1",
+    id: "Qwen/Qwen3-32B",
+    name: "Qwen3 32B",
     provider: "huggingface",
     speed: "medium",
     contextWindow: 131072,
     maxOutput: 8192,
-    supportsImages: true,
-    supportsCode: true,
-    description: "Mistral's latest. Vision capable, great for coding.",
-    pricing: "Free (rate limited)",
-  },
-  {
-    id: "microsoft/Phi-4-reasoning-plus",
-    name: "Phi-4 Reasoning+",
-    provider: "huggingface",
-    speed: "medium",
-    contextWindow: 32768,
-    maxOutput: 16384,
     supportsImages: false,
     supportsCode: true,
-    description: "Microsoft's reasoning specialist. Math & code powerhouse.",
-    pricing: "Free (rate limited)",
+    description: "Alibaba's Qwen. Code, math, multilingual.",
+    pricing: "Free",
   },
   {
-    id: "google/Gemma-3-27B-IT",
+    id: "google/gemma-3-27b-it",
     name: "Gemma 3 27B",
     provider: "huggingface",
     speed: "medium",
     contextWindow: 131072,
     maxOutput: 8192,
-    supportsImages: true,
+    supportsImages: false,
     supportsCode: true,
-    description: "Google's open model with vision support.",
-    pricing: "Free (rate limited)",
+    description: "Google's Gemma. General purpose.",
+    pricing: "Free",
   },
 ];
 
@@ -69,7 +45,7 @@ export function createHuggingFaceProvider(): AIProvider | null {
 
   return {
     id: "huggingface",
-    name: "Hugging Face",
+    name: "HuggingFace",
     icon: "🤗",
     color: "#FFD21E",
     isAvailable: true,
@@ -95,6 +71,7 @@ export function createHuggingFaceProvider(): AIProvider | null {
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
+            model,
             messages: apiMessages,
             temperature,
             max_tokens: maxTokens,
@@ -105,7 +82,7 @@ export function createHuggingFaceProvider(): AIProvider | null {
 
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(`HuggingFace API error: ${res.status} - ${err}`);
+        throw new Error(`HuggingFace: ${res.status} - ${err}`);
       }
 
       const reader = res.body?.getReader();

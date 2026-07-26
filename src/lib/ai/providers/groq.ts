@@ -7,47 +7,47 @@ const GROQ_MODELS: AIModel[] = [
     provider: "groq",
     speed: "fast",
     contextWindow: 131072,
-    maxOutput: 32768,
-    supportsImages: false,
-    supportsCode: true,
-    description: "Lightning-fast inference on Groq's LPU. Best speed in class.",
-    pricing: "Free (rate limited)",
-  },
-  {
-    id: "gemma2-9b-it",
-    name: "Gemma 2 9B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 8192,
     maxOutput: 8192,
     supportsImages: false,
     supportsCode: true,
-    description: "Compact Google model. Ultra-fast responses.",
-    pricing: "Free (rate limited)",
+    description: "General purpose, multilingual. Best Groq model.",
+    pricing: "Free",
   },
   {
-    id: "mixtral-8x7b-32768",
-    name: "Mixtral 8x7B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 32768,
-    maxOutput: 32768,
-    supportsImages: false,
-    supportsCode: true,
-    description: "Mixture of Experts model. Great balance of speed and quality.",
-    pricing: "Free (rate limited)",
-  },
-  {
-    id: "deepseek-r1-distill-llama-70b",
-    name: "DeepSeek R1 (Llama)",
+    id: "gpt-oss-20b",
+    name: "GPT-OSS 20B",
     provider: "groq",
     speed: "fast",
     contextWindow: 131072,
-    maxOutput: 16384,
+    maxOutput: 8192,
     supportsImages: false,
     supportsCode: true,
-    description: "Distilled DeepSeek R1 reasoning model on Groq's fast infra.",
-    pricing: "Free (rate limited)",
+    description: "OpenAI open-weight. General coding & reasoning.",
+    pricing: "Free",
+  },
+  {
+    id: "qwen3-32b",
+    name: "Qwen3 32B",
+    provider: "groq",
+    speed: "fast",
+    contextWindow: 131072,
+    maxOutput: 8192,
+    supportsImages: false,
+    supportsCode: true,
+    description: "Alibaba's Qwen. Code, math, multilingual.",
+    pricing: "Free",
+  },
+  {
+    id: "meta-llama/llama-4-scout-17b-16e-instruct",
+    name: "Llama 4 Scout",
+    provider: "groq",
+    speed: "fast",
+    contextWindow: 131072,
+    maxOutput: 8192,
+    supportsImages: false,
+    supportsCode: true,
+    description: "Meta's Llama 4. General purpose.",
+    pricing: "Free",
   },
 ];
 
@@ -57,7 +57,7 @@ export function createGroqProvider(): AIProvider | null {
 
   return {
     id: "groq",
-    name: "GroqCloud",
+    name: "Groq",
     icon: "⚡",
     color: "#F55036",
     isAvailable: true,
@@ -91,7 +91,7 @@ export function createGroqProvider(): AIProvider | null {
 
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Groq API error: ${res.status} - ${err}`);
+        throw new Error(`Groq: ${res.status} - ${err}`);
       }
 
       const reader = res.body?.getReader();
