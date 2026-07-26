@@ -9,18 +9,7 @@ import {
 
 interface Message { role: "user" | "assistant"; content: string; model?: string }
 interface ConversationEntry { id: string; title: string; created_at: string; messageCount: number }
-interface ModelInfo { id: string; name: string; speed: "fast" | "medium" | "slow"; description: string; contextWindow: number }
-
-const MODELS: ModelInfo[] = [
-  { id: "gpt-oss:20b", name: "GPT-OSS 20B", speed: "fast", description: "Lightweight, fast responses", contextWindow: 131072 },
-  { id: "gpt-oss:120b", name: "GPT-OSS 120B", speed: "medium", description: "Best general-purpose model", contextWindow: 131072 },
-  { id: "nemotron-3-ultra", name: "Nemotron 3 Ultra", speed: "medium", description: "NVIDIA's deep reasoning model", contextWindow: 131072 },
-  { id: "nemotron-3-super", name: "Nemotron 3 Super", speed: "fast", description: "Balanced speed and quality", contextWindow: 131072 },
-  { id: "nemotron-3-nano:30b", name: "Nemotron 3 Nano", speed: "fast", description: "Fastest for simple tasks", contextWindow: 131072 },
-  { id: "gemma4:31b", name: "Gemma 4 31B", speed: "medium", description: "Google's open model", contextWindow: 131072 },
-  { id: "minimax-m3", name: "MiniMax M3", speed: "slow", description: "Long-context specialist", contextWindow: 131072 },
-  { id: "minimax-m2.5", name: "MiniMax M2.5", speed: "medium", description: "Balanced general use", contextWindow: 131072 },
-];
+interface ModelInfo { id: string; name: string; speed: "fast" | "medium" | "slow"; description: string; contextWindow: number; provider: string }
 
 const SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
 
@@ -36,7 +25,8 @@ CORE RULES:
 Be helpful, encouraging, and educational.`;
 
 export default function AIChatPage() {
-  const [selectedModel, setSelectedModel] = useState("gpt-oss:20b");
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,7 +42,32 @@ export default function AIChatPage() {
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-  useEffect(() => { loadCredits(); loadHistory(); }, []);
+  useEffect(() => { loadCredits(); loadHistory(); loadModels(); }, []);
+
+  async function loadModels() {
+    try {
+      const res = await fetch("/api/ai/chat");
+      const data = await res.json();
+      const allModels: ModelInfo[] = (data.models || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        speed: m.speed,
+        description: m.description,
+        contextWindow: m.contextWindow,
+        provider: m.providerName || "Unknown",
+      }));
+      setModels(allModels);
+      if (allModels.length > 0 && !selectedModel) {
+        const fast = allModels.find((m) => m.speed === "fast" && m.provider === "Qwen Cloud") || allModels.find((m) => m.speed === "fast") || allModels[0];
+        setSelectedModel(fast.id);
+      }
+    } catch {
+      setModels([
+        { id: "gpt-oss:20b", name: "GPT-OSS 20B", speed: "fast", description: "Fast model", contextWindow: 131072, provider: "Ollama" },
+      ]);
+      setSelectedModel("gpt-oss:20b");
+    }
+  }
 
   async function loadCredits() {
     try {
@@ -123,7 +138,7 @@ export default function AIChatPage() {
 
   useEffect(() => { if (messages.length > 0) scheduleSave(); }, [messages]);
 
-  const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
+  const currentModel = models.find((m) => m.id === selectedModel) || models[0];
 
   async function handleSend() {
     if (!input.trim() || loading) return;
@@ -173,7 +188,7 @@ export default function AIChatPage() {
         }
       }
       if (!fullText) {
-        setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: "No response. Check OLLAMA_API_KEY is configured." }; return u; });
+        setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: "No response. Check API keys are configured." }; return u; });
       }
     } catch (err: any) {
       setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: `Error: ${err?.message || "Failed"}` }; return u; });
@@ -191,6 +206,9 @@ export default function AIChatPage() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
+
+  const qwenModels = models.filter((m) => m.provider === "Qwen Cloud");
+  const ollamaModels = models.filter((m) => m.provider === "Ollama");
 
   return (
     <div className="flex h-[calc(100vh-6rem)]">
@@ -229,20 +247,41 @@ export default function AIChatPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> AI Chat</h1>
-            <p className="text-muted-foreground text-xs">Powered by Ollama Cloud &middot; 8 models{autoSaving && " &middot; saving..."}</p>
+            <p className="text-muted-foreground text-xs">{qwenModels.length} Qwen &middot; {ollamaModels.length} Ollama &middot; {models.length} total{autoSaving && " &middot; saving..."}</p>
           </div>
           <Badge variant="outline" className="text-xs">{credits} credits</Badge>
         </div>
 
         {/* Model Selector */}
-        <div className="flex gap-1.5 mb-3 flex-wrap">
-          {MODELS.map((model) => (
-            <button key={model.id} onClick={() => setSelectedModel(model.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
-              {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-              {model.name}
-            </button>
-          ))}
+        <div className="mb-3 space-y-2">
+          {qwenModels.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1 px-1 font-medium">☁️ QWEN CLOUD</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {qwenModels.map((model) => (
+                  <button key={model.id} onClick={() => setSelectedModel(model.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
+                    {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                    {model.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {ollamaModels.length > 0 && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1 px-1 font-medium">🦙 OLLAMA CLOUD (Free)</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {ollamaModels.map((model) => (
+                  <button key={model.id} onClick={() => setSelectedModel(model.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
+                    {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                    {model.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Chat */}
@@ -256,7 +295,7 @@ export default function AIChatPage() {
                   </div>
                   <p className="text-lg font-medium mb-1">Chat with Syllexa AI</p>
                   <p className="text-sm text-muted-foreground max-w-md mb-6">
-                    Using {currentModel.name}. Ask me anything — DSA, OS, DBMS, Networks, Math, and more.
+                    {currentModel ? `Using ${currentModel.name} (${currentModel.provider}).` : "Select a model."} Ask me anything — DSA, OS, DBMS, Networks, Math, and more.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {["Explain binary search trees", "Write a Python merge sort", "TCP vs UDP differences", "What is recursion?"].map((q) => (
@@ -307,7 +346,9 @@ export default function AIChatPage() {
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             </Button>
           </form>
-          <p className="text-[10px] text-muted-foreground mt-1.5 px-1">{currentModel.name} &middot; {(currentModel.contextWindow / 1000).toFixed(0)}K context &middot; Pay-per-use</p>
+          <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
+            {currentModel ? `${currentModel.name} via ${currentModel.provider} · ${(currentModel.contextWindow / 1000).toFixed(0)}K context` : "Select a model"}
+          </p>
         </div>
       </div>
     </div>

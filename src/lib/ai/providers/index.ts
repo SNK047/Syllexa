@@ -1,11 +1,12 @@
 import type { AIProvider } from "./types";
 import { createOllamaProvider } from "./ollama";
+import { createQwenProvider } from "./qwen";
 
 let providers: AIProvider[] | null = null;
 
 export function getProviders(): AIProvider[] {
   if (providers) return providers;
-  providers = [createOllamaProvider()].filter(Boolean) as AIProvider[];
+  providers = [createOllamaProvider(), createQwenProvider()].filter(Boolean) as AIProvider[];
   return providers;
 }
 
