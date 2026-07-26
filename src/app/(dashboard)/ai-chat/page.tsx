@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,6 +24,18 @@ CORE RULES:
 
 Be helpful, encouraging, and educational.`;
 
+function getSupabase() {
+  const { createClient } = require("@/lib/supabase/client");
+  return createClient();
+}
+
+async function getUser() {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export default function AIChatPage() {
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
@@ -36,25 +48,25 @@ export default function AIChatPage() {
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [autoSaving, setAutoSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
   useEffect(() => { loadCredits(); loadHistory(); loadModels(); }, []);
+
+  useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
 
   async function loadModels() {
     try {
       const res = await fetch("/api/ai/chat");
       const data = await res.json();
       const allModels: ModelInfo[] = (data.models || []).map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        speed: m.speed,
-        description: m.description,
-        contextWindow: m.contextWindow,
-        provider: m.providerName || "Unknown",
+        id: m.id, name: m.name, speed: m.speed, description: m.description,
+        contextWindow: m.contextWindow, provider: m.providerName || "Unknown",
       }));
       setModels(allModels);
       if (allModels.length > 0 && !selectedModel) {
@@ -62,9 +74,7 @@ export default function AIChatPage() {
         setSelectedModel(fast.id);
       }
     } catch {
-      setModels([
-        { id: "qwen3.7-flash", name: "Qwen 3.7 Flash", speed: "fast", description: "Fast model", contextWindow: 131072, provider: "Qwen Cloud" },
-      ]);
+      setModels([{ id: "qwen3.7-flash", name: "Qwen 3.7 Flash", speed: "fast", description: "Fast model", contextWindow: 131072, provider: "Qwen Cloud" }]);
       setSelectedModel("qwen3.7-flash");
     }
   }
@@ -79,64 +89,98 @@ export default function AIChatPage() {
 
   async function loadHistory() {
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getUser();
       if (!user) return;
-      const { data } = await supabase.from("ai_conversations").select("id, messages, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      const supabase = getSupabase();
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from("ai_conversations")
+        .select("id, messages, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) { console.error("loadHistory error:", error); return; }
       setConversationHistory((data || []).map((c: any) => ({
         id: c.id,
         title: c.messages?.[0]?.role === "user" ? c.messages[0].content.slice(0, 50) : "New conversation",
         created_at: c.created_at,
         messageCount: c.messages?.length || 0,
       })));
-    } catch {}
+    } catch (e) { console.error("loadHistory exception:", e); }
   }
 
-  function newChat() { setConversationId(null); setMessages([]); setInput(""); }
+  function newChat() {
+    setConversationId(null);
+    setMessages([]);
+    setInput("");
+  }
 
   async function loadConversation(id: string) {
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase.from("ai_conversations").select("id, messages").eq("id", id).single();
-      if (data) { setConversationId(data.id); setMessages(data.messages || []); }
-    } catch {}
+      const supabase = getSupabase();
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from("ai_conversations")
+        .select("id, messages")
+        .eq("id", id)
+        .single();
+      if (error) { console.error("loadConversation error:", error); return; }
+      if (data) {
+        setConversationId(data.id);
+        setMessages(data.messages || []);
+      }
+    } catch (e) { console.error("loadConversation exception:", e); }
   }
 
   async function deleteConversationItem(id: string) {
+    if (deletingId) return;
+    setDeletingId(id);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      await supabase.from("ai_conversations").delete().eq("id", id);
-      if (conversationId === id) newChat();
+      const supabase = getSupabase();
+      if (!supabase) return;
+      const { error } = await supabase.from("ai_conversations").delete().eq("id", id);
+      if (error) { console.error("delete error:", error); return; }
+      if (conversationIdRef.current === id) {
+        setConversationId(null);
+        setMessages([]);
+      }
       await loadHistory();
-    } catch {}
+    } catch (e) { console.error("delete exception:", e); }
+    setDeletingId(null);
   }
 
-  function scheduleSave() {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      setAutoSaving(true);
-      try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && messages.length > 0) {
-          if (conversationId) {
-            await supabase.from("ai_conversations").update({ messages }).eq("id", conversationId);
-          } else {
-            const { data } = await supabase.from("ai_conversations").insert({ user_id: user.id, messages }).select("id").single();
-            if (data) setConversationId(data.id);
-          }
-          await loadHistory();
+  const saveConversation = useCallback(async (msgs: Message[], existingId: string | null) => {
+    if (savingRef.current) return;
+    const user = await getUser();
+    if (!user || msgs.length === 0) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    savingRef.current = true;
+    setAutoSaving(true);
+    try {
+      if (existingId) {
+        const { error } = await supabase.from("ai_conversations").update({ messages: msgs }).eq("id", existingId);
+        if (error) console.error("update error:", error);
+      } else {
+        const { data, error } = await supabase.from("ai_conversations").insert({ user_id: user.id, messages: msgs }).select("id").single();
+        if (error) { console.error("insert error:", error); return; }
+        if (data) {
+          setConversationId(data.id);
+          conversationIdRef.current = data.id;
         }
-      } catch {}
-      setAutoSaving(false);
-    }, 1500);
-  }
+      }
+      await loadHistory();
+    } catch (e) { console.error("save exception:", e); }
+    savingRef.current = false;
+    setAutoSaving(false);
+  }, []);
 
-  useEffect(() => { if (messages.length > 0) scheduleSave(); }, [messages]);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const timer = setTimeout(() => { saveConversation(messages, conversationIdRef.current); }, 2000);
+    return () => clearTimeout(timer);
+  }, [messages, saveConversation]);
 
   const currentModel = models.find((m) => m.id === selectedModel) || models[0];
 
@@ -144,17 +188,19 @@ export default function AIChatPage() {
     if (!input.trim() || loading) return;
     const userMessage = input.trim();
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    const userMsg: Message = { role: "user", content: userMessage };
+    const assistantMsg: Message = { role: "assistant", content: "", model: selectedModel };
+    const newMessages = [...messages, userMsg, assistantMsg];
+    setMessages(newMessages);
     setLoading(true);
-    const assistantIdx = messages.length + 1;
-    setMessages((prev) => [...prev, { role: "assistant", content: "", model: selectedModel }]);
+    const assistantIdx = newMessages.length - 1;
 
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: userMessage }].map((m) => ({ role: m.role, content: m.content })),
+          messages: newMessages.filter((m) => m.content).map((m) => ({ role: m.role, content: m.content })),
           model: selectedModel,
           temperature: 0.7,
           maxTokens: 4096,
@@ -182,16 +228,28 @@ export default function AIChatPage() {
               const parsed = JSON.parse(data);
               if (parsed.error) fullText += `\n\nError: ${parsed.error}`;
               else if (parsed.text) fullText += parsed.text;
-              setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: fullText }; return u; });
+              setMessages((prev) => {
+                const u = [...prev];
+                if (u[assistantIdx]) u[assistantIdx] = { ...u[assistantIdx], content: fullText };
+                return u;
+              });
             } catch {}
           }
         }
       }
       if (!fullText) {
-        setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: "No response. Check API keys are configured." }; return u; });
+        setMessages((prev) => {
+          const u = [...prev];
+          if (u[assistantIdx]) u[assistantIdx] = { ...u[assistantIdx], content: "No response. Check QWEN_API_KEY is configured." };
+          return u;
+        });
       }
     } catch (err: any) {
-      setMessages((prev) => { const u = [...prev]; u[assistantIdx] = { ...u[assistantIdx], content: `Error: ${err?.message || "Failed"}` }; return u; });
+      setMessages((prev) => {
+        const u = [...prev];
+        if (u[assistantIdx]) u[assistantIdx] = { ...u[assistantIdx], content: `Error: ${err?.message || "Failed"}` };
+        return u;
+      });
     } finally {
       setLoading(false);
     }
@@ -207,8 +265,6 @@ export default function AIChatPage() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  const qwenModels = models.filter((m) => m.provider === "Qwen Cloud");
-
   return (
     <div className="flex h-[calc(100vh-6rem)]">
       {/* History Sidebar */}
@@ -220,18 +276,22 @@ export default function AIChatPage() {
           <div className="p-1.5 space-y-0.5">
             {conversationHistory.length === 0 && <p className="text-xs text-muted-foreground text-center py-8">No conversations yet</p>}
             {conversationHistory.map((c) => (
-              <button key={c.id} onClick={() => loadConversation(c.id)}
-                className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-left group transition-all ${conversationId === c.id ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}>
-                <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{c.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} &middot; {c.messageCount} msgs</p>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); deleteConversationItem(c.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all">
-                  <Trash2 className="h-3 w-3" />
+              <div key={c.id}
+                className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg group transition-all ${conversationId === c.id ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"}`}>
+                <button className="flex-1 flex items-start gap-2 text-left min-w-0" onClick={() => loadConversation(c.id)}>
+                  <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{c.title}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · {c.messageCount} msgs</p>
+                  </div>
                 </button>
-              </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteConversationItem(c.id); }}
+                  disabled={deletingId === c.id}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50">
+                  {deletingId === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -246,7 +306,7 @@ export default function AIChatPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> AI Chat</h1>
-            <p className="text-muted-foreground text-xs">{models.length} models powered by Qwen Cloud{autoSaving && " · saving..."}</p>
+            <p className="text-muted-foreground text-xs">{models.length} models · Qwen Cloud{autoSaving && " · saving..."}</p>
           </div>
           <Badge variant="outline" className="text-xs">{credits} credits</Badge>
         </div>
@@ -275,7 +335,7 @@ export default function AIChatPage() {
                   </div>
                   <p className="text-lg font-medium mb-1">Chat with Syllexa AI</p>
                   <p className="text-sm text-muted-foreground max-w-md mb-6">
-                    {currentModel ? `Using ${currentModel.name} (${currentModel.provider}).` : "Select a model."} Ask me anything — DSA, OS, DBMS, Networks, Math, and more.
+                    {currentModel ? `Using ${currentModel.name}.` : "Select a model."} Ask me anything — DSA, OS, DBMS, Networks, Math, and more.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {["Explain binary search trees", "Write a Python merge sort", "TCP vs UDP differences", "What is recursion?"].map((q) => (
@@ -285,27 +345,30 @@ export default function AIChatPage() {
                 </div>
               )}
 
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.role === "assistant" && (
-                    <div className="size-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
-                      <Bot className="h-4 w-4 text-primary" />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap relative group ${msg.role === "user" ? "bg-primary text-primary-foreground" : msg.content.startsWith("Error:") ? "bg-destructive/10 text-destructive border border-destructive/20" : "bg-muted"}`}>
-                    {msg.content || (loading && i === messages.length - 1 ? (
-                      <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Thinking...</span>
-                    ) : null)}
-                    {msg.role === "assistant" && msg.content && (
-                      <button onClick={() => copyMessage(msg.content, i)}
-                        className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-md p-1 shadow-sm">
-                        {copiedIdx === i ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                      </button>
+              {messages.map((msg, i) => {
+                if (!msg.content && !(loading && i === messages.length - 1)) return null;
+                return (
+                  <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {msg.role === "assistant" && (
+                      <div className="size-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                        <Bot className="h-4 w-4 text-primary" />
+                      </div>
                     )}
+                    <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap relative group ${msg.role === "user" ? "bg-primary text-primary-foreground" : msg.content.startsWith("Error:") ? "bg-destructive/10 text-destructive border border-destructive/20" : "bg-muted"}`}>
+                      {msg.content || (loading && i === messages.length - 1 ? (
+                        <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Thinking...</span>
+                      ) : null)}
+                      {msg.role === "assistant" && msg.content && !msg.content.startsWith("Error:") && (
+                        <button onClick={() => copyMessage(msg.content, i)}
+                          className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-md p-1 shadow-sm">
+                          {copiedIdx === i ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      )}
+                    </div>
+                    {msg.role === "user" && <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0"><User className="h-4 w-4" /></div>}
                   </div>
-                  {msg.role === "user" && <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0"><User className="h-4 w-4" /></div>}
-                </div>
-              ))}
+                );
+              })}
               <div ref={bottomRef} />
             </div>
           </div>
@@ -327,7 +390,7 @@ export default function AIChatPage() {
             </Button>
           </form>
           <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-            {currentModel ? `${currentModel.name} via ${currentModel.provider} · ${(currentModel.contextWindow / 1000).toFixed(0)}K context` : "Select a model"}
+            {currentModel ? `${currentModel.name} · ${(currentModel.contextWindow / 1000).toFixed(0)}K context` : "Select a model"}
           </p>
         </div>
       </div>
