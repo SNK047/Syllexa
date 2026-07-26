@@ -200,7 +200,9 @@ export default function AIChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.filter((m) => m.content).map((m) => ({ role: m.role, content: m.content })),
+          messages: newMessages
+            .filter((m) => m.content && typeof m.content === "string")
+            .map((m) => ({ role: m.role, content: m.content.replace(/\[.*?\.(png|jpg|jpeg|gif|webp|image)\]/gi, "") })),
           model: selectedModel,
           temperature: 0.7,
           maxTokens: 4096,

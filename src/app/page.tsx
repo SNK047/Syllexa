@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Sparkles, Users, Award } from "lucide-react";
+import { Sparkles, Users, Award, Upload, Brain, Trophy } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -9,7 +9,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <BookOpen className="h-7 w-7 text-primary" />
+            <img src="/logo.png" alt="Syllexa" className="h-8 w-8 rounded" />
             <span className="text-xl font-bold">Syllexa</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function LandingPage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <FeatureCard
-              icon={<BookOpen className="h-6 w-6" />}
+              icon={<Upload className="h-6 w-6" />}
               title="Upload & Share"
               description="Share your notes with classmates. OCR processing makes every document searchable."
             />

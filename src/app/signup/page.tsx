@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -92,7 +92,7 @@ export default function SignupPage() {
             href="/"
             className="inline-flex items-center gap-2 text-primary mb-4"
           >
-            <BookOpen className="h-8 w-8" />
+            <img src="/logo.png" alt="Syllexa" className="h-10 w-10 rounded-lg" />
           </Link>
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-muted-foreground text-sm">
