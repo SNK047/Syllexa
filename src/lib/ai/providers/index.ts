@@ -1,21 +1,11 @@
 import type { AIProvider } from "./types";
-import { createOpenRouterProvider } from "./openrouter";
-import { createGroqProvider } from "./groq";
-import { createHuggingFaceProvider } from "./huggingface";
-import { createTogetherProvider } from "./together";
+import { createDeepSeekProvider } from "./deepseek";
 
 let providers: AIProvider[] | null = null;
 
 export function getProviders(): AIProvider[] {
   if (providers) return providers;
-
-  providers = [
-    createOpenRouterProvider(),
-    createGroqProvider(),
-    createHuggingFaceProvider(),
-    createTogetherProvider(),
-  ].filter(Boolean) as AIProvider[];
-
+  providers = [createDeepSeekProvider()].filter(Boolean) as AIProvider[];
   return providers;
 }
 

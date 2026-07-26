@@ -1,79 +1,43 @@
 import type { AIProvider, AIModel, ChatMessage } from "./types";
 
-const GROQ_MODELS: AIModel[] = [
+const DEEPSEEK_MODELS: AIModel[] = [
   {
-    id: "openai/gpt-oss-120b",
-    name: "GPT-OSS 120B",
-    provider: "groq",
+    id: "deepseek-v4-flash",
+    name: "V4 Flash",
+    provider: "deepseek",
     speed: "fast",
-    contextWindow: 131072,
-    maxOutput: 65536,
+    contextWindow: 1048576,
+    maxOutput: 384000,
     supportsImages: false,
     supportsCode: true,
-    description: "OpenAI's 120B open-weight model. Best Groq model for accuracy and reasoning.",
-    pricing: "Paid",
+    description: "Fastest DeepSeek model. Excellent for quick questions, code, and general use. $0.14/M input — cheapest frontier-class model.",
+    pricing: "$0.14/$0.28 per 1M tokens",
   },
   {
-    id: "llama-3.3-70b-versatile",
-    name: "Llama 3.3 70B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 131072,
-    maxOutput: 32768,
+    id: "deepseek-v4-pro",
+    name: "V4 Pro",
+    provider: "deepseek",
+    speed: "medium",
+    contextWindow: 1048576,
+    maxOutput: 384000,
     supportsImages: false,
     supportsCode: true,
-    description: "Meta's Llama 3.3. General purpose, multilingual. Reliable all-rounder.",
-    pricing: "Paid",
-  },
-  {
-    id: "qwen/qwen3.6-27b",
-    name: "Qwen 3.6 27B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 131072,
-    maxOutput: 16384,
-    supportsImages: false,
-    supportsCode: true,
-    description: "Alibaba's Qwen 3.6. Strong for math, code, and multilingual tasks.",
-    pricing: "Paid",
-  },
-  {
-    id: "openai/gpt-oss-20b",
-    name: "GPT-OSS 20B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 131072,
-    maxOutput: 65536,
-    supportsImages: false,
-    supportsCode: true,
-    description: "OpenAI's smaller open-weight model. Fast with good accuracy.",
-    pricing: "Paid",
-  },
-  {
-    id: "llama-3.1-8b-instant",
-    name: "Llama 3.1 8B",
-    provider: "groq",
-    speed: "fast",
-    contextWindow: 131072,
-    maxOutput: 131072,
-    supportsImages: false,
-    supportsCode: true,
-    description: "Lightweight Llama. Very fast for quick questions.",
-    pricing: "Paid",
+    description: "DeepSeek flagship. Best accuracy for complex reasoning, research, and difficult problems. $0.44/M input.",
+    pricing: "$0.44/$0.87 per 1M tokens",
   },
 ];
 
-export function createGroqProvider(): AIProvider | null {
-  const apiKey = process.env.GROQ_API_KEY;
+export function createDeepSeekProvider(): AIProvider | null {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return null;
 
   return {
-    id: "groq",
-    name: "Groq",
-    icon: "⚡",
-    color: "#F55036",
+    id: "deepseek",
+    name: "DeepSeek",
+    icon: "DS",
+    color: "#4F6BF6",
     isAvailable: true,
-    models: GROQ_MODELS,
+    models: DEEPSEEK_MODELS,
 
     async *chat(messages: ChatMessage[], model: string, options = {}) {
       const { temperature = 0.7, maxTokens = 4096, systemPrompt } = options;
@@ -86,7 +50,7 @@ export function createGroqProvider(): AIProvider | null {
         apiMessages.push({ role: m.role, content: m.content });
       }
 
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +67,7 @@ export function createGroqProvider(): AIProvider | null {
 
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Groq: ${res.status} - ${err}`);
+        throw new Error(`DeepSeek: ${res.status} - ${err}`);
       }
 
       const reader = res.body?.getReader();

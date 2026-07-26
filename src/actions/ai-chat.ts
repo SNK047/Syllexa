@@ -34,7 +34,7 @@ export async function chatWithNote(
     console.error("AI chat error:", err);
     const msg = err.message || "AI service error";
     if (msg.includes("not configured")) {
-      return { error: "AI service is not configured. Please add OPENROUTER_API_KEY to environment variables." };
+      return { error: "AI service is not configured. Please add DEEPSEEK_API_KEY to environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }
@@ -50,7 +50,7 @@ export async function chatGeneral(
     console.error("AI chat error:", err);
     const msg = err.message || "AI service error";
     if (msg.includes("not configured")) {
-      return { error: "AI service is not configured. Please add OPENROUTER_API_KEY to environment variables." };
+      return { error: "AI service is not configured. Please add DEEPSEEK_API_KEY to environment variables." };
     }
     return { error: `AI error: ${msg}` };
   }

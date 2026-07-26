@@ -6,19 +6,19 @@ export const runtime = "edge";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, provider: providerId, model, temperature, maxTokens, systemPrompt } = body;
+    const { messages, model, temperature, maxTokens, systemPrompt } = body;
 
-    if (!providerId || !model || !messages?.length) {
+    if (!model || !messages?.length) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: provider, model, messages" }),
+        JSON.stringify({ error: "Missing required fields: model, messages" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const provider = getProvider(providerId);
+    const provider = getProvider("deepseek");
     if (!provider) {
       return new Response(
-        JSON.stringify({ error: `Provider "${providerId}" not configured. Add its API key to environment variables.` }),
+        JSON.stringify({ error: "DeepSeek API key not configured. Add DEEPSEEK_API_KEY to environment variables." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

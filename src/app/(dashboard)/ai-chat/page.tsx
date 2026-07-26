@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Send,
   Loader2,
@@ -11,14 +10,9 @@ import {
   User,
   Sparkles,
   Zap,
-  Globe,
-  Cpu,
-  Heart,
-  Link2,
   Copy,
   Check,
   RotateCcw,
-  Info,
   Plus,
   MessageSquare,
   Trash2,
@@ -29,7 +23,6 @@ import {
 interface Message {
   role: "user" | "assistant";
   content: string;
-  provider?: string;
   model?: string;
 }
 
@@ -40,52 +33,63 @@ interface ConversationEntry {
   messageCount: number;
 }
 
-interface ProviderInfo {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  isAvailable: boolean;
-  modelCount: number;
-}
-
 interface ModelInfo {
   id: string;
   name: string;
-  provider: string;
   speed: "fast" | "medium" | "slow";
-  contextWindow: number;
-  maxOutput: number;
-  supportsImages: boolean;
-  supportsCode: boolean;
   description: string;
   pricing: string;
+  contextWindow: number;
 }
 
-const PROVIDER_ICONS: Record<string, any> = {
-  openrouter: Globe,
-  groq: Zap,
-  huggingface: Heart,
-  together: Link2,
-};
+const MODELS: ModelInfo[] = [
+  {
+    id: "deepseek-v4-flash",
+    name: "V4 Flash",
+    speed: "fast",
+    description: "Fast & accurate. Best for quick questions, code, and general study help.",
+    pricing: "$0.14/$0.28 per 1M tokens",
+    contextWindow: 1048576,
+  },
+  {
+    id: "deepseek-v4-pro",
+    name: "V4 Pro",
+    speed: "medium",
+    description: "DeepSeek flagship. Best for complex reasoning, research, and difficult problems.",
+    pricing: "$0.44/$0.87 per 1M tokens",
+    contextWindow: 1048576,
+  },
+];
 
-const SPEED_COLORS = {
-  fast: "text-green-500",
-  medium: "text-yellow-500",
-  slow: "text-orange-500",
-};
+const SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
+
+CORE RULES:
+- Always provide ACCURATE, FACTUALLY CORRECT information. Never guess or make up facts.
+- If you are unsure, say "I'm not certain — please verify with your textbook."
+- Use your training knowledge to answer. Do NOT claim to look things up or access the internet.
+- For code: provide complete, runnable code with comments explaining each part.
+- For math: show the full derivation step by step.
+- For definitions: give a precise 1-2 line definition, then explain in simple terms.
+- Use markdown formatting: headers, bold, bullet points, code blocks, LaTeX for math.
+- Relate concepts to real-world applications when possible.
+- If the question is about a specific Indian university syllabus, provide content relevant to Anna University / VTU / JNTU / Mumbai University patterns.
+
+SUBJECTS YOU EXCEL AT:
+- Computer Science: Data Structures, Algorithms, OS, DBMS, Computer Networks, Compiler Design, Theory of Computation, Software Engineering
+- Programming: C, C++, Java, Python, JavaScript, SQL, HTML/CSS
+- Electronics: Digital Electronics, Signals & Systems, VLSI, Communication Systems
+- Math: Linear Algebra, Calculus, Probability, Statistics, Discrete Math
+- Core Engineering: Thermodynamics, Fluid Mechanics, Circuit Analysis
+
+Be helpful, encouraging, and educational. Students are here to learn — help them understand, not just memorize.`;
 
 export default function AIChatPage() {
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [allModels, setAllModels] = useState<ModelInfo[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<string>("");
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<string>("deepseek-v4-flash");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [credits, setCredits] = useState<number>(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const [showModelInfo, setShowModelInfo] = useState(false);
 
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
@@ -102,27 +106,9 @@ export default function AIChatPage() {
   }, [messages, loading]);
 
   useEffect(() => {
-    loadProviders();
     loadCredits();
     loadHistory();
   }, []);
-
-  async function loadProviders() {
-    try {
-      const res = await fetch("/api/ai/chat");
-      const data = await res.json();
-      setProviders(data.providers || []);
-      setAllModels(data.models || []);
-      if (data.providers?.length > 0) {
-        const available = data.providers.find((p: ProviderInfo) => p.isAvailable) || data.providers[0];
-        setSelectedProvider(available.id);
-        if (data.models?.length > 0) {
-          const providerModels = data.models.filter((m: ModelInfo) => m.provider === available.id);
-          if (providerModels.length > 0) setSelectedModel(providerModels[0].id);
-        }
-      }
-    } catch {}
-  }
 
   async function loadCredits() {
     try {
@@ -200,19 +186,10 @@ export default function AIChatPage() {
     if (messages.length > 0) scheduleSave();
   }, [messages]);
 
-  const currentModel = allModels.find(
-    (m) => m.provider === selectedProvider && m.id === selectedModel
-  );
-  const providerModels = allModels.filter((m) => m.provider === selectedProvider);
-
-  function handleProviderChange(providerId: string) {
-    setSelectedProvider(providerId);
-    const models = allModels.filter((m) => m.provider === providerId);
-    if (models.length > 0) setSelectedModel(models[0].id);
-  }
+  const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
 
   async function handleSend() {
-    if (!input.trim() || loading || !selectedProvider || !selectedModel) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -222,7 +199,7 @@ export default function AIChatPage() {
     const assistantIdx = messages.length + 1;
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", content: "", provider: selectedProvider, model: selectedModel },
+      { role: "assistant", content: "", model: selectedModel },
     ]);
 
     try {
@@ -234,32 +211,10 @@ export default function AIChatPage() {
             role: m.role,
             content: m.content,
           })),
-          provider: selectedProvider,
           model: selectedModel,
           temperature: 0.7,
           maxTokens: 4096,
-          systemPrompt: `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
-
-CORE RULES:
-- Always provide ACCURATE, FACTUALLY CORRECT information. Never guess or make up facts.
-- If you are unsure about something, say "I'm not certain about this — please verify with your textbook."
-- Use your training knowledge to answer. Do NOT claim to look things up or access the internet.
-- When explaining concepts, use step-by-step breakdowns with examples.
-- For code: provide complete, runnable code with comments explaining each part.
-- For math: show the full derivation step by step.
-- For definitions: give a precise 1-2 line definition, then explain in simple terms.
-- Use markdown formatting: headers, bold, bullet points, code blocks, LaTeX for math.
-- Relate concepts to real-world applications when possible.
-- If the question is about a specific Indian university syllabus, provide content relevant to Anna University / VTU / JNTU / Mumbai University patterns.
-
-SUBJECTS YOU EXCEL AT:
-- Computer Science: Data Structures, Algorithms, OS, DBMS, Computer Networks, Compiler Design, Theory of Computation, Software Engineering
-- Programming: C, C++, Java, Python, JavaScript, SQL, HTML/CSS
-- Electronics: Digital Electronics, Signals & Systems, VLSI, Communication Systems
-- Math: Linear Algebra, Calculus, Probability, Statistics, Discrete Math
-- Core Engineering: Thermodynamics, Fluid Mechanics, Circuit Analysis
-
-Be helpful, encouraging, and educational. Students are here to learn — help them understand, not just memorize.`,
+          systemPrompt: SYSTEM_PROMPT,
         }),
       });
 
@@ -302,7 +257,7 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
       if (!fullText) {
         setMessages((prev) => {
           const updated = [...prev];
-          updated[assistantIdx] = { ...updated[assistantIdx], content: "No response received. Please check your API key and try again." };
+          updated[assistantIdx] = { ...updated[assistantIdx], content: "No response received. Please check that DEEPSEEK_API_KEY is configured." };
           return updated;
         });
       }
@@ -330,8 +285,6 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
     }
   }
 
-  const availableCount = providers.filter((p) => p.isAvailable).length;
-
   return (
     <div className="flex h-[calc(100vh-6rem)]">
       {/* History Sidebar */}
@@ -341,7 +294,7 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
             <Plus className="h-3.5 w-3.5 mr-1" /> New Chat
           </Button>
         </div>
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="p-1.5 space-y-0.5">
             {historyLoading && (
               <div className="flex items-center justify-center py-8">
@@ -378,7 +331,7 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
               </button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Toggle History Button */}
@@ -399,7 +352,7 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
               AI Chat
             </h1>
             <p className="text-muted-foreground text-xs">
-              {availableCount} provider{availableCount !== 1 ? "s" : ""} &middot; {allModels.length} models
+              Powered by DeepSeek V4
               {autoSaving && <span className="ml-2 text-muted-foreground/50">saving...</span>}
             </p>
           </div>
@@ -408,208 +361,122 @@ Be helpful, encouraging, and educational. Students are here to learn — help th
           </div>
         </div>
 
-        <div className="flex gap-4 flex-1 min-h-0">
-          {/* Providers & Models Sidebar */}
-          <div className="w-52 shrink-0 flex flex-col gap-3">
-            <div className="rounded-xl border border-border/50 bg-card p-2.5 space-y-0.5">
-              <p className="text-[10px] font-medium text-muted-foreground mb-1.5 px-1">PROVIDERS</p>
-              {providers.map((provider) => {
-                const Icon = PROVIDER_ICONS[provider.id] || Cpu;
-                const isActive = selectedProvider === provider.id;
-                return (
-                  <button
-                    key={provider.id}
-                    onClick={() => handleProviderChange(provider.id)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all text-left ${
-                      isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    } ${!provider.isAvailable ? "opacity-50" : ""}`}
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0" style={isActive ? { color: provider.color } : {}} />
-                    <span className="flex-1 truncate">{provider.name}</span>
-                    <div
-                      className="h-1.5 w-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: provider.isAvailable ? "#22c55e" : "#a3a3a3" }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+        {/* Model Selector */}
+        <div className="flex gap-2 mb-3">
+          {MODELS.map((model) => {
+            const isActive = selectedModel === model.id;
+            return (
+              <button
+                key={model.id}
+                onClick={() => setSelectedModel(model.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border ${
+                  isActive
+                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                    : "bg-card text-muted-foreground border-border/50 hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {model.speed === "fast" ? <Zap className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                <span>{model.name}</span>
+                <span className="text-[10px] opacity-60">{model.pricing}</span>
+              </button>
+            );
+          })}
+        </div>
 
-            {providerModels.length > 0 && (
-              <div className="rounded-xl border border-border/50 bg-card p-2.5 space-y-0.5">
-                <p className="text-[10px] font-medium text-muted-foreground mb-1.5 px-1">MODELS</p>
-                {providerModels.map((model) => {
-                  const isActive = selectedModel === model.id;
-                  return (
-                    <button
-                      key={model.id}
-                      onClick={() => setSelectedModel(model.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all text-left ${
-                        isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 rounded-xl border border-border/50 bg-card flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-4 max-w-3xl mx-auto">
+                {messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4 bg-primary/10">
+                      <Bot className="h-8 w-8 text-primary" />
+                    </div>
+                    <p className="text-lg font-medium mb-1">Chat with Syllexa AI</p>
+                    <p className="text-sm text-muted-foreground max-w-md mb-6">
+                      Powered by {currentModel.name}. Ask me anything about your university subjects — DSA, OS, DBMS, Networks, Math, and more.
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {["Explain binary search trees", "Write a Python merge sort", "TCP vs UDP differences", "What is recursion?"].map((q) => (
+                        <Button key={q} variant="outline" size="sm" className="text-xs" onClick={() => { setInput(q); inputRef.current?.focus(); }}>
+                          {q}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {msg.role === "assistant" && (
+                      <div className="size-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                        <Bot className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap relative group ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : msg.content.startsWith("Error:")
+                          ? "bg-destructive/10 text-destructive border border-destructive/20"
+                          : "bg-muted"
                       }`}
                     >
-                      <span className="flex-1 truncate">{model.name}</span>
-                      <span className={`text-[10px] ${SPEED_COLORS[model.speed]}`}>
-                        {model.speed === "fast" ? "●●●" : model.speed === "medium" ? "●●○" : "●○○"}
-                      </span>
-                    </button>
-                  );
-                })}
+                      {msg.content || (loading && i === messages.length - 1 ? (
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Thinking...
+                        </span>
+                      ) : null)}
+                      {msg.role === "assistant" && msg.content && (
+                        <button
+                          onClick={() => copyMessage(msg.content, i)}
+                          className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-md p-1 shadow-sm"
+                        >
+                          {copiedIdx === i ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      )}
+                    </div>
+                    {msg.role === "user" && (
+                      <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <User className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div ref={bottomRef} />
               </div>
-            )}
-
-            {currentModel && (
-              <div className="rounded-xl border border-border/50 bg-card p-2.5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-medium text-muted-foreground">MODEL</p>
-                  <button onClick={() => setShowModelInfo(!showModelInfo)}>
-                    <Info className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </button>
-                </div>
-                <p className="text-xs font-medium">{currentModel.name}</p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">{currentModel.description}</p>
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {currentModel.contextWindow >= 1000000
-                      ? `${(currentModel.contextWindow / 1000000).toFixed(0)}M`
-                      : `${(currentModel.contextWindow / 1000).toFixed(0)}K`} ctx
-                  </Badge>
-                  <Badge variant="secondary" className="text-[10px]">{currentModel.speed}</Badge>
-                  {currentModel.supportsImages && <Badge variant="secondary" className="text-[10px]">Vision</Badge>}
-                  {currentModel.supportsCode && <Badge variant="secondary" className="text-[10px]">Code</Badge>}
-                  <Badge variant="outline" className="text-[10px]">{currentModel.pricing}</Badge>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <div className="flex-1 rounded-xl border border-border/50 bg-card flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4 max-w-3xl mx-auto">
-                  {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      {selectedProvider ? (
-                        (() => {
-                          const Icon = PROVIDER_ICONS[selectedProvider] || Bot;
-                          const prov = providers.find((p) => p.id === selectedProvider);
-                          return (
-                            <>
-                              <div
-                                className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4"
-                                style={{ backgroundColor: `${prov?.color}15` }}
-                              >
-                                <Icon className="h-8 w-8" style={{ color: prov?.color }} />
-                              </div>
-                              <p className="text-lg font-medium mb-1">Chat with {prov?.name || "AI"}</p>
-                              <p className="text-sm text-muted-foreground max-w-md mb-6">
-                                Using {currentModel?.name || "AI model"}. Ask me anything about your subjects!
-                              </p>
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <>
-                          <Bot className="h-16 w-16 text-muted-foreground/30 mb-4" />
-                          <p className="text-lg font-medium mb-1">Welcome to AI Chat</p>
-                          <p className="text-sm text-muted-foreground mb-2">Select a provider to get started.</p>
-                        </>
-                      )}
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {["Explain binary search trees", "Write a Python merge sort", "TCP vs UDP differences", "What is recursion?"].map((q) => (
-                          <Button key={q} variant="outline" size="sm" className="text-xs" onClick={() => { setInput(q); inputRef.current?.focus(); }}>
-                            {q}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {msg.role === "assistant" && (
-                        <div
-                          className="size-8 rounded-full flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `${providers.find((p) => p.id === msg.provider)?.color || "#666"}15` }}
-                        >
-                          <Bot className="h-4 w-4" style={{ color: providers.find((p) => p.id === msg.provider)?.color }} />
-                        </div>
-                      )}
-                      <div
-                        className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap relative group ${
-                          msg.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : msg.content.startsWith("Error:")
-                            ? "bg-destructive/10 text-destructive border border-destructive/20"
-                            : "bg-muted"
-                        }`}
-                      >
-                        {msg.content || (loading && i === messages.length - 1 ? (
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Thinking...
-                          </span>
-                        ) : null)}
-                        {msg.role === "assistant" && msg.content && (
-                          <button
-                            onClick={() => copyMessage(msg.content, i)}
-                            className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-md p-1 shadow-sm"
-                          >
-                            {copiedIdx === i ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                          </button>
-                        )}
-                        {msg.role === "assistant" && msg.model && (
-                          <div className="mt-2 pt-2 border-t border-border/30">
-                            <span className="text-[10px] text-muted-foreground">
-                              {providers.find((p) => p.id === msg.provider)?.name} &middot;{" "}
-                              {allModels.find((m) => m.id === msg.model)?.name || msg.model}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {msg.role === "user" && (
-                        <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <div ref={bottomRef} />
-                </div>
+          {/* Input */}
+          <div className="mt-3">
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 items-end">
+              <div className="flex-1">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask Syllexa AI anything about your subjects..."
+                  disabled={loading}
+                  rows={1}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[48px] max-h-[120px]"
+                  style={{ height: "auto" }}
+                  onInput={(e) => {
+                    const t = e.target as HTMLTextAreaElement;
+                    t.style.height = "auto";
+                    t.style.height = Math.min(t.scrollHeight, 120) + "px";
+                  }}
+                />
               </div>
-            </div>
-
-            {/* Input */}
-            <div className="mt-3">
-              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={selectedProvider ? `Ask ${providers.find((p) => p.id === selectedProvider)?.name || "AI"} anything...` : "Select a provider first..."}
-                    disabled={loading || !selectedProvider}
-                    rows={1}
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm resize-none outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[48px] max-h-[120px]"
-                    style={{ height: "auto" }}
-                    onInput={(e) => {
-                      const t = e.target as HTMLTextAreaElement;
-                      t.style.height = "auto";
-                      t.style.height = Math.min(t.scrollHeight, 120) + "px";
-                    }}
-                  />
-                </div>
-                <Button type="submit" size="icon" className="shrink-0 h-12 w-12 rounded-xl" disabled={loading || !input.trim() || !selectedProvider}>
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                </Button>
-              </form>
-              {selectedProvider && currentModel && (
-                <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-                  {currentModel.name} &middot; {currentModel.contextWindow >= 1000000 ? `${(currentModel.contextWindow / 1000000).toFixed(0)}M` : `${(currentModel.contextWindow / 1000).toFixed(0)}K`} ctx &middot; {currentModel.pricing}
-                </p>
-              )}
-            </div>
+              <Button type="submit" size="icon" className="shrink-0 h-12 w-12 rounded-xl" disabled={loading || !input.trim()}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+              </Button>
+            </form>
+            <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
+              {currentModel.name} &middot; 1M context &middot; {currentModel.pricing}
+            </p>
           </div>
         </div>
       </div>
