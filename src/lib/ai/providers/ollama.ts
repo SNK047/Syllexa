@@ -146,7 +146,7 @@ export function createOllamaProvider(): AIProvider | null {
         apiMessages.push({ role: m.role, content: m.content });
       }
 
-      const res = await fetch("https://ollama.com/v1/chat/completions", {
+      const res = await fetch("https://ollama.com/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -155,9 +155,11 @@ export function createOllamaProvider(): AIProvider | null {
         body: JSON.stringify({
           model,
           messages: apiMessages,
-          temperature,
-          max_tokens: maxTokens,
           stream: true,
+          options: {
+            temperature,
+            num_predict: maxTokens,
+          },
         }),
       });
 
@@ -181,11 +183,12 @@ export function createOllamaProvider(): AIProvider | null {
         buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          if (line.trim()) {
             try {
-              const data = JSON.parse(line.slice(6));
-              const text = data.choices?.[0]?.delta?.content;
-              if (text) yield text;
+              const data = JSON.parse(line);
+              if (data.message?.content) {
+                yield data.message.content;
+              }
             } catch {}
           }
         }
