@@ -1,4 +1,4 @@
-const OLLAMA_API_URL = "https://ollama.com/api/chat";
+const QWEN_API_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 const STUDY_SYSTEM_PROMPT = `You are Syllexa AI, an intelligent university study assistant for Indian engineering students.
 
@@ -15,20 +15,20 @@ SUBJECTS: Data Structures, Algorithms, OS, DBMS, Computer Networks, C/C++/Java/P
 
 Be helpful, encouraging, and educational — help students understand, not just memorize.`;
 
-async function callOllama(
+async function callQwen(
   prompt: string,
   systemPrompt: string,
-  model: string = "gpt-oss:20b"
+  model: string = "qwen3.7-flash"
 ): Promise<string> {
-  const apiKey = process.env.OLLAMA_API_KEY;
-  if (!apiKey) throw new Error("OLLAMA_API_KEY not configured");
+  const apiKey = process.env.QWEN_API_KEY;
+  if (!apiKey) throw new Error("QWEN_API_KEY not configured");
 
   const messages = [
     { role: "system" as const, content: systemPrompt || STUDY_SYSTEM_PROMPT },
     { role: "user" as const, content: prompt },
   ];
 
-  const response = await fetch(OLLAMA_API_URL, {
+  const response = await fetch(QWEN_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -37,18 +37,19 @@ async function callOllama(
     body: JSON.stringify({
       model,
       messages,
+      temperature: 0.7,
+      max_tokens: 4096,
       stream: false,
-      options: { temperature: 0.7, num_predict: 4096 },
     }),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Ollama API: ${response.status} - ${err}`);
+    throw new Error(`Qwen API: ${response.status} - ${err}`);
   }
 
   const data = await response.json();
-  return data.message?.content || "No response generated.";
+  return data.choices?.[0]?.message?.content || "No response generated.";
 }
 
 export async function generateChatResponse(
@@ -56,8 +57,8 @@ export async function generateChatResponse(
   context?: string,
   model?: string
 ): Promise<string> {
-  const apiKey = process.env.OLLAMA_API_KEY;
-  if (!apiKey) throw new Error("OLLAMA_API_KEY not configured");
+  const apiKey = process.env.QWEN_API_KEY;
+  if (!apiKey) throw new Error("QWEN_API_KEY not configured");
 
   const systemMsg = context
     ? `You are an AI tutor. Answer questions about uploaded notes. Base answers ONLY on the provided context. Be precise and academic.\n\nContext:\n${context}`
@@ -71,27 +72,27 @@ export async function generateChatResponse(
     })),
   ];
 
-  const response = await fetch(OLLAMA_API_URL, {
+  const response = await fetch(QWEN_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: model || "gpt-oss:20b",
+      model: model || "qwen3.7-flash",
       messages: apiMessages,
-      stream: false,
-      options: { temperature: 0.7, num_predict: 4096 },
+      temperature: 0.7,
+      max_tokens: 4096,
     }),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Ollama API: ${response.status} - ${err}`);
+    throw new Error(`Qwen API: ${response.status} - ${err}`);
   }
 
   const data = await response.json();
-  return data.message?.content || "No response generated.";
+  return data.choices?.[0]?.message?.content || "No response generated.";
 }
 
 export async function generateFlashcards(
@@ -100,7 +101,7 @@ export async function generateFlashcards(
 ): Promise<{ question: string; answer: string; difficulty: string }[]> {
   const prompt = `Generate ${count} flashcards from the following study material. Each should test understanding. Return as JSON array with "question", "answer", "difficulty" (easy/medium/hard). Return ONLY the JSON array.\n\nStudy material:\n${content.slice(0, 8000)}`;
 
-  const response = await callOllama(prompt, "Return only valid JSON. Make questions specific and answers precise.");
+  const response = await callQwen(prompt, "Return only valid JSON. Make questions specific and answers precise.");
   const jsonMatch = response.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
   return JSON.parse(jsonMatch[0]);
@@ -112,7 +113,7 @@ export async function generateQuiz(
 ): Promise<{ question: string; options: string[]; correct: number; explanation: string }[]> {
   const prompt = `Generate ${questionCount} MCQ questions from the following study material. Return as JSON array with "question", "options" (4 strings), "correct" (index 0-3), "explanation". Return ONLY the JSON array.\n\nStudy material:\n${content.slice(0, 8000)}`;
 
-  const response = await callOllama(prompt, "Return only valid JSON. Distractors should be plausible.");
+  const response = await callQwen(prompt, "Return only valid JSON. Distractors should be plausible.");
   const jsonMatch = response.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
   return JSON.parse(jsonMatch[0]);
@@ -129,13 +130,13 @@ export async function generateSummary(
   };
 
   const prompt = `${styleMap[style]}\n\nStudy material:\n${content.slice(0, 8000)}`;
-  return callOllama(prompt, "Be accurate and well-structured. Do not fabricate information.");
+  return callQwen(prompt, "Be accurate and well-structured. Do not fabricate information.");
 }
 
 export async function generateKeywords(content: string): Promise<string[]> {
   const prompt = `Extract key terms, concepts, and keywords from this study material. Return as JSON array of strings. Return ONLY the JSON array.\n\nStudy material:\n${content.slice(0, 8000)}`;
 
-  const response = await callOllama(prompt, "Return only valid JSON array.");
+  const response = await callQwen(prompt, "Return only valid JSON array.");
   const jsonMatch = response.match(/\[[\s\S]*\]/);
   if (!jsonMatch) return [];
   return JSON.parse(jsonMatch[0]);

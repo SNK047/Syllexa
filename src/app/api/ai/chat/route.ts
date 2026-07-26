@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const provider = getProvider("ollama");
+    const provider = getProvider("qwen");
     if (!provider) {
       return new Response(
-        JSON.stringify({ error: "Ollama API key not configured. Add OLLAMA_API_KEY to environment variables." }),
+        JSON.stringify({ error: "QWEN_API_KEY not configured. Add QWEN_API_KEY to environment variables." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

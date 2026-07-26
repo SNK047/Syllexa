@@ -58,14 +58,14 @@ export default function AIChatPage() {
       }));
       setModels(allModels);
       if (allModels.length > 0 && !selectedModel) {
-        const fast = allModels.find((m) => m.speed === "fast" && m.provider === "Qwen Cloud") || allModels.find((m) => m.speed === "fast") || allModels[0];
+        const fast = allModels.find((m) => m.speed === "fast") || allModels[0];
         setSelectedModel(fast.id);
       }
     } catch {
       setModels([
-        { id: "gpt-oss:20b", name: "GPT-OSS 20B", speed: "fast", description: "Fast model", contextWindow: 131072, provider: "Ollama" },
+        { id: "qwen3.7-flash", name: "Qwen 3.7 Flash", speed: "fast", description: "Fast model", contextWindow: 131072, provider: "Qwen Cloud" },
       ]);
-      setSelectedModel("gpt-oss:20b");
+      setSelectedModel("qwen3.7-flash");
     }
   }
 
@@ -208,7 +208,6 @@ export default function AIChatPage() {
   }
 
   const qwenModels = models.filter((m) => m.provider === "Qwen Cloud");
-  const ollamaModels = models.filter((m) => m.provider === "Ollama");
 
   return (
     <div className="flex h-[calc(100vh-6rem)]">
@@ -247,41 +246,22 @@ export default function AIChatPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> AI Chat</h1>
-            <p className="text-muted-foreground text-xs">{qwenModels.length} Qwen &middot; {ollamaModels.length} Ollama &middot; {models.length} total{autoSaving && " &middot; saving..."}</p>
+            <p className="text-muted-foreground text-xs">{models.length} models powered by Qwen Cloud{autoSaving && " · saving..."}</p>
           </div>
           <Badge variant="outline" className="text-xs">{credits} credits</Badge>
         </div>
 
         {/* Model Selector */}
-        <div className="mb-3 space-y-2">
-          {qwenModels.length > 0 && (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1 px-1 font-medium">☁️ QWEN CLOUD</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {qwenModels.map((model) => (
-                  <button key={model.id} onClick={() => setSelectedModel(model.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
-                    {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                    {model.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {ollamaModels.length > 0 && (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1 px-1 font-medium">🦙 OLLAMA CLOUD (Free)</p>
-              <div className="flex gap-1.5 flex-wrap">
-                {ollamaModels.map((model) => (
-                  <button key={model.id} onClick={() => setSelectedModel(model.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
-                    {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                    {model.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="mb-3">
+          <div className="flex gap-1.5 flex-wrap">
+            {models.map((model) => (
+              <button key={model.id} onClick={() => setSelectedModel(model.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all border ${selectedModel === model.id ? "bg-primary/10 text-primary border-primary/30 font-medium" : "bg-card text-muted-foreground border-border/50 hover:bg-muted"}`}>
+                {model.speed === "fast" ? <Zap className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                {model.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Chat */}
