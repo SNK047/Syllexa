@@ -6,7 +6,7 @@ export const runtime = "edge";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, model, temperature, maxTokens, systemPrompt } = body;
+    const { messages, model, temperature, maxTokens, systemPrompt, noteContext } = body;
 
     if (!model || !messages?.length) {
       return new Response(
@@ -24,6 +24,11 @@ export async function POST(req: NextRequest) {
       return m;
     }).filter((m: any) => m.content);
 
+    let finalSystemPrompt = systemPrompt || "";
+    if (noteContext) {
+      finalSystemPrompt += `\n\n--- NOTE CONTEXT ---\nThe student is asking about the following note:\nTitle: ${noteContext.title}\nContent:\n${noteContext.content.slice(0, 6000)}\n--- END NOTE ---\nAnswer based on this note when relevant. If the question is about this note, refer to its content.`;
+    }
+
     const provider = getProvider("qwen");
     if (!provider) {
       return new Response(
@@ -39,7 +44,7 @@ export async function POST(req: NextRequest) {
           for await (const chunk of provider.chat(cleanMessages, model, {
             temperature,
             maxTokens,
-            systemPrompt,
+            systemPrompt: finalSystemPrompt,
           })) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
           }
