@@ -156,7 +156,33 @@ export async function createRequest(request: {
     .select()
     .single();
 
-  return { data, error: error?.message };
+  if (error) return { data: null, error: error.message };
+
+  // Broadcast notification to all other users
+  try {
+    const { data: allUsers } = await supabase
+      .from("users")
+      .select("id")
+      .neq("id", user.id);
+
+    if (allUsers && allUsers.length > 0) {
+      const { createNotification } = await import("@/actions/notifications");
+      const urgencyLabel = request.urgency === "urgent" ? " [URGENT]" : "";
+      await Promise.all(allUsers.map((u: any) =>
+        createNotification(
+          u.id,
+          "new_request",
+          `New Note Request${urgencyLabel}`,
+          `${user.user_metadata?.name || "A student"} needs notes: ${request.description.slice(0, 80)}...`,
+          `/requests?fulfill=${data.id}`
+        )
+      ));
+    }
+  } catch (e) {
+    console.error("Failed to broadcast notification:", e);
+  }
+
+  return { data, error: null };
 }
 
 export async function updateRequest(

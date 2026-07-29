@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +57,9 @@ interface Request {
   fulfiller: { id: string; name: string } | null;
 }
 
-export default function RequestsPage() {
+function RequestsContent() {
+  const searchParams = useSearchParams();
+  const fulfillParam = searchParams.get("fulfill");
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -124,6 +127,16 @@ export default function RequestsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (fulfillParam && currentUser && requests.length > 0) {
+      const request = requests.find((r) => r.id === fulfillParam);
+      if (request && request.status === "open" && request.user_id !== currentUser.id) {
+        openDetail(request);
+        setActiveTab("open");
+      }
+    }
+  }, [fulfillParam, currentUser, requests]);
 
   async function loadUser() {
     const { ensureUser } = await import("@/actions/ensure-user");
@@ -684,6 +697,18 @@ export default function RequestsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function RequestsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <RequestsContent />
+    </Suspense>
   );
 }
 
