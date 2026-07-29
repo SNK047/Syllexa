@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Download, Star, Clock, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { FileText, Download, Star, Clock, MoreHorizontal, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface NoteCardProps {
@@ -28,8 +34,7 @@ export function NoteCard({ note, currentUserId, onDelete }: NoteCardProps) {
   const isOwner = currentUserId && note.users?.id === currentUserId;
   const [deleting, setDeleting] = useState(false);
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault();
+  async function handleDelete() {
     if (deleting) return;
     if (!confirm("Delete this note permanently?")) return;
     setDeleting(true);
@@ -50,6 +55,26 @@ export function NoteCard({ note, currentUserId, onDelete }: NoteCardProps) {
 
   return (
     <div className="relative group/card">
+      {isOwner && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<button />}
+            className="absolute top-2 right-2 z-10 p-1.5 rounded-lg hover:bg-muted transition-colors opacity-0 group-hover/card:opacity-100 data-open:opacity-100 focus-visible:opacity-100 outline-none"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={deleting}
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       <Link href={`/notes/${note.id}`}>
         <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
           <CardContent className="p-4 space-y-3">
@@ -106,16 +131,6 @@ export function NoteCard({ note, currentUserId, onDelete }: NoteCardProps) {
           </CardContent>
         </Card>
       </Link>
-      {isOwner && (
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-50"
-          title="Delete note"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      )}
     </div>
   );
 }
