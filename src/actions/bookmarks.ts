@@ -81,7 +81,7 @@ export async function isBookmarked(noteId: string) {
     .select("id")
     .eq("user_id", user.id)
     .eq("note_id", noteId)
-    .single();
+    .maybeSingle();
 
   return !!data;
 }

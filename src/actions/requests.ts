@@ -217,8 +217,8 @@ export async function fulfillRequest(requestId: string, noteId: string) {
   try {
     const { addCredits } = await import("@/actions/credits");
     await addCredits(request.reward_credits || 20, "fulfill_request", "Fulfilled a note request");
-  } catch {
-    // Credits is non-critical, don't block fulfillment
+  } catch (e) {
+    console.error("Credit assignment failed for fulfillment:", e);
   }
 
   return { error: null };
@@ -247,13 +247,20 @@ export async function getRequestStats(userId?: string) {
   const supabase = await createClient();
   if (!supabase) return { open: 0, fulfilled: 0, myRequests: 0 };
 
-  const [{ count: open }, { count: fulfilled }, { count: myRequests }] = await Promise.all([
-    supabase.from("requests").select("*", { count: "exact", head: true }).eq("status", "open"),
-    supabase.from("requests").select("*", { count: "exact", head: true }).eq("status", "fulfilled"),
+  const [openResult, fulfilledResult, myResult] = await Promise.all([
+    supabase.from("requests").select("*", { count: "exact", head: true }).eq("status", "open")
+      .catch(() => ({ count: 0 })),
+    supabase.from("requests").select("*", { count: "exact", head: true }).eq("status", "fulfilled")
+      .catch(() => ({ count: 0 })),
     userId
       ? supabase.from("requests").select("*", { count: "exact", head: true }).eq("user_id", userId)
+          .catch(() => ({ count: 0 }))
       : Promise.resolve({ count: 0 }),
   ]);
 
-  return { open: open || 0, fulfilled: fulfilled || 0, myRequests: myRequests || 0 };
+  return {
+    open: (openResult as any)?.count || 0,
+    fulfilled: (fulfilledResult as any)?.count || 0,
+    myRequests: (myResult as any)?.count || 0,
+  };
 }

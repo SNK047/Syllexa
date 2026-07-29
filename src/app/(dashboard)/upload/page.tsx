@@ -109,10 +109,13 @@ export default function UploadPage() {
         return;
       }
 
-      setSuccess(true);
-
       const { addCredits } = await import("@/actions/credits");
-      await addCredits(10, "upload", "Uploaded a new note");
+      const creditResult = await addCredits(10, "upload", "Uploaded a new note");
+      if (creditResult.error) {
+        console.error("Credit assignment failed:", creditResult.error);
+      }
+
+      setSuccess(true);
 
       setTimeout(() => {
         router.push("/explore");

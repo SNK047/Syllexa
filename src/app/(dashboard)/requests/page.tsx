@@ -101,8 +101,7 @@ export default function RequestsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [{ getAllRequests }, { getRequestStats }] = await Promise.all([
-        import("@/actions/requests"),
+      const [{ getAllRequests, getRequestStats }] = await Promise.all([
         import("@/actions/requests"),
       ]);
       const [result, statsResult] = await Promise.all([
@@ -214,7 +213,7 @@ export default function RequestsPage() {
         setEditUrgency(data.urgency);
         setEditCredits(data.reward_credits);
       }
-    } catch {}
+    } catch (e) { console.error("refreshDetail error:", e); }
     setDetailLoading(false);
   }
 

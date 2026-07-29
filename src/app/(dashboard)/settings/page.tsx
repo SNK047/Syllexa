@@ -55,6 +55,10 @@ export default function SettingsPage() {
       data: { name, notifications },
     });
 
+    if (user) {
+      await supabase.from("users").update({ name }).eq("id", user.id);
+    }
+
     setSaving(false);
   }
 

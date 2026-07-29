@@ -45,6 +45,9 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+
         setUserName(
           user.user_metadata?.name || user.email?.split("@")[0] || "Student"
         );
@@ -54,16 +57,21 @@ export default function DashboardPage() {
         const { data: notes } = await getNotes({ limit: 3 });
         if (notes) {
           setRecentNotes(notes);
-          setStats((s) => ({ ...s, totalNotes: notes.length }));
         }
 
-        // Fetch open requests count
-        const { getAllRequests } = await import("@/actions/requests");
-        const { data: requests } = await getAllRequests(100);
-        if (requests) {
-          const openRequests = requests.filter((r: any) => r.status === "open").length;
-          setStats((s) => ({ ...s, openRequests }));
+        // Fetch actual total notes count for this user
+        if (supabase) {
+          const { count: totalNotes } = await supabase
+            .from("notes")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", user.id);
+          setStats((s) => ({ ...s, totalNotes: totalNotes || 0 }));
         }
+
+        // Fetch request stats
+        const { getRequestStats } = await import("@/actions/requests");
+        const requestStats = await getRequestStats(user.id);
+        setStats((s) => ({ ...s, openRequests: requestStats.open }));
       }
     } catch (err) {
       console.error("Dashboard load error:", err);

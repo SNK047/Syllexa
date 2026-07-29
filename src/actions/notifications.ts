@@ -45,10 +45,17 @@ export async function markAsRead(notificationId: string) {
   const supabase = await createClient();
   if (!supabase) return { error: "Supabase not configured" };
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
   const { error } = await supabase
     .from("notifications")
     .update({ read: true })
-    .eq("id", notificationId);
+    .eq("id", notificationId)
+    .eq("user_id", user.id);
 
   return { error: error?.message };
 }
@@ -96,10 +103,17 @@ export async function deleteNotification(notificationId: string) {
   const supabase = await createClient();
   if (!supabase) return { error: "Supabase not configured" };
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
   const { error } = await supabase
     .from("notifications")
     .delete()
-    .eq("id", notificationId);
+    .eq("id", notificationId)
+    .eq("user_id", user.id);
 
   return { error: error?.message };
 }

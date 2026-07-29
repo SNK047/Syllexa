@@ -15,14 +15,16 @@ const icons: Record<number, any> = {
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("all");
 
   useEffect(() => {
-    loadLeaderboard();
-  }, []);
+    loadLeaderboard(period);
+  }, [period]);
 
-  async function loadLeaderboard() {
+  async function loadLeaderboard(selectedPeriod: string) {
+    setLoading(true);
     const { getLeaderboard } = await import("@/actions/credits");
-    const { data } = await getLeaderboard();
+    const { data } = await getLeaderboard(selectedPeriod as any);
     setLeaderboard(data || []);
     setLoading(false);
   }
@@ -34,22 +36,18 @@ export default function LeaderboardPage() {
         <h1 className="text-2xl font-bold">Leaderboard</h1>
       </div>
 
-      <Tabs defaultValue="all">
+      <Tabs defaultValue="all" onValueChange={(v) => setPeriod(v)}>
         <TabsList>
           <TabsTrigger value="all">All Time</TabsTrigger>
           <TabsTrigger value="weekly">This Week</TabsTrigger>
           <TabsTrigger value="monthly">This Month</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-4">
-          <LeaderboardList items={leaderboard} loading={loading} />
-        </TabsContent>
-        <TabsContent value="weekly" className="mt-4">
-          <LeaderboardList items={leaderboard} loading={loading} />
-        </TabsContent>
-        <TabsContent value="monthly" className="mt-4">
-          <LeaderboardList items={leaderboard} loading={loading} />
-        </TabsContent>
+        {["all", "weekly", "monthly"].map((p) => (
+          <TabsContent key={p} value={p} className="mt-4">
+            {period === p && <LeaderboardList items={leaderboard} loading={loading} />}
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );
