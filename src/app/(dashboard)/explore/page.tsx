@@ -14,11 +14,23 @@ export default function ExplorePage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    loadCurrentUser();
     loadNotes();
     loadSubjects();
   }, []);
+
+  async function loadCurrentUser() {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    if (!supabase) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id || null);
+  }
 
   async function loadSubjects() {
     const { createClient } = await import("@/lib/supabase/client");
@@ -178,7 +190,12 @@ export default function ExplorePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              currentUserId={currentUserId || undefined}
+              onDelete={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+            />
           ))}
         </div>
       )}
