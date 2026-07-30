@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("Student");
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalNotes: 0,
     openRequests: 0,
@@ -50,12 +51,23 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
+        setCurrentUserId(user.id);
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
 
         setUserName(
           user.user_metadata?.name || user.email?.split("@")[0] || "Student"
         );
+
+        // Fetch user credits
+        const { data: userData } = await supabase
+          .from("users")
+          .select("credits")
+          .eq("id", user.id)
+          .single();
+        if (userData) {
+          setStats((s) => ({ ...s, credits: userData.credits || 0 }));
+        }
 
         // Fetch recent notes
         const { getNotes } = await import("@/actions/notes");
@@ -196,7 +208,12 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentNotes.map((note) => (
-              <NoteCard key={note.id} note={note} />
+              <NoteCard
+                key={note.id}
+                note={note}
+                currentUserId={currentUserId || undefined}
+                onDelete={(id) => setRecentNotes((prev) => prev.filter((n) => n.id !== id))}
+              />
             ))}
           </div>
         )}

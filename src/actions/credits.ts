@@ -3,10 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 
 const CREDIT_RULES = {
-  UPLOAD_NOTE: 10,
+  UPLOAD_NOTE: 5,
   FULFILL_REQUEST: 20,
   DAILY_LOGIN: 5,
   RECEIVE_RATING: 5,
+  CREATE_REQUEST: -10,
   PRIORITY_REQUEST: -15,
   UNLIMITED_AI_MONTHLY: -50,
 } as const;

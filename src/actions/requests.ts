@@ -182,6 +182,15 @@ export async function createRequest(request: {
     console.error("Failed to broadcast notification:", e);
   }
 
+  // Deduct credits for creating a request
+  try {
+    const { addCredits, CREDIT_RULES } = await import("@/actions/credits");
+    const deduction = request.urgency === "urgent" ? CREDIT_RULES.PRIORITY_REQUEST : CREDIT_RULES.CREATE_REQUEST;
+    await addCredits(deduction, "create_request", `Created a ${request.urgency || "normal"} note request`);
+  } catch (e) {
+    console.error("Credit deduction failed:", e);
+  }
+
   return { data, error: null };
 }
 

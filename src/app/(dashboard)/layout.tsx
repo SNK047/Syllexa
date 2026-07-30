@@ -142,7 +142,7 @@ export default function DashboardLayout({
           <span className="text-lg font-bold">Syllexa</span>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="px-3 py-2 space-y-0.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -225,7 +225,7 @@ export default function DashboardLayout({
           })}
         </div>
 
-        <div className="px-3 py-4 space-y-2">
+        <div className="mt-auto px-3 py-3 space-y-2">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
             <Coins className="h-4 w-4 text-yellow-500" />
             <span className="text-sm font-medium">{userCredits} credits</span>

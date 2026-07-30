@@ -127,7 +127,7 @@ export default function UploadPage() {
       }
 
       const { addCredits } = await import("@/actions/credits");
-      const creditResult = await addCredits(10, "upload", "Uploaded a new note");
+      const creditResult = await addCredits(5, "upload", "Uploaded a new note");
       if (creditResult.error) {
         console.error("Credit assignment failed:", creditResult.error);
       }
