@@ -6,42 +6,78 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: [] });
   }
 
-  const apiKey = process.env.GOOGLE_API_KEY;
-  const cx = process.env.SEARCH_ENGINE_ID;
-
-  if (!apiKey || !cx) {
-    return NextResponse.json({ results: [], error: "Search API not configured" });
-  }
-
   try {
-    const url = new URL("https://www.googleapis.com/customsearch/v1");
-    url.searchParams.set("key", apiKey);
-    url.searchParams.set("cx", cx);
+    const url = new URL("https://api.duckduckgo.com/");
     url.searchParams.set("q", query);
-    url.searchParams.set("num", "8");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("no_html", "1");
+    url.searchParams.set("skip_disambig", "1");
+    url.searchParams.set("t", "syllexa");
 
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(8000),
+      headers: { "Accept": "application/json" },
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.error("Google Search API error:", res.status, errText);
-      return NextResponse.json({ results: [], error: "Search API request failed" });
+      console.error("DuckDuckGo API error:", res.status);
+      return NextResponse.json({ results: [], error: "Search request failed" });
     }
 
     const data = await res.json();
 
-    const results = (data.items || []).map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      snippet: item.snippet,
-      source: item.displayLink,
-    }));
+    const results: { title: string; link: string; snippet: string; source: string }[] = [];
+
+    if (data.AbstractText && data.AbstractURL) {
+      results.push({
+        title: data.Heading || data.AbstractSource || "Summary",
+        link: data.AbstractURL,
+        snippet: data.AbstractText.slice(0, 300),
+        source: data.AbstractSource || "duckduckgo.com",
+      });
+    }
+
+    if (data.Results && Array.isArray(data.Results)) {
+      for (const item of data.Results) {
+        if (item.FirstURL && item.Text) {
+          results.push({
+            title: item.Text.split(" - ")[0] || item.Text.slice(0, 80),
+            link: item.FirstURL,
+            snippet: item.Text,
+            source: new URL(item.FirstURL).hostname,
+          });
+        }
+      }
+    }
+
+    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+      for (const topic of data.RelatedTopics) {
+        if (topic.FirstURL && topic.Text) {
+          results.push({
+            title: topic.Text.split(" - ")[0] || topic.Text.slice(0, 80),
+            link: topic.FirstURL,
+            snippet: topic.Text,
+            source: new URL(topic.FirstURL).hostname,
+          });
+        }
+        if (topic.Topics && Array.isArray(topic.Topics)) {
+          for (const sub of topic.Topics) {
+            if (sub.FirstURL && sub.Text) {
+              results.push({
+                title: sub.Text.split(" - ")[0] || sub.Text.slice(0, 80),
+                link: sub.FirstURL,
+                snippet: sub.Text,
+                source: new URL(sub.FirstURL).hostname,
+              });
+            }
+          }
+        }
+      }
+    }
 
     return NextResponse.json({ results });
   } catch (err) {
-    console.error("Web search error:", err);
+    console.error("DuckDuckGo search error:", err);
     return NextResponse.json({ results: [], error: "Search request failed" });
   }
 }

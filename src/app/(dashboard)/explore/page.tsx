@@ -280,7 +280,7 @@ function ExploreContent() {
                 !webLoading && (
                   <div className="rounded-lg border border-border/30 bg-muted/20 p-6 text-center">
                     <p className="text-sm text-muted-foreground">
-                      No web results found. Try a different search term or configure the Google Search API.
+                      No web results found. Try a different search term.
                     </p>
                   </div>
                 )
