@@ -42,6 +42,9 @@ const navItems = [
   { href: "/upload", label: "Upload Notes", icon: Upload },
   { href: "/requests", label: "Requests", icon: FileText },
   { href: "/ai-chat", label: "AI Chat", icon: Sparkles },
+];
+
+const bottomNavItems = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/notifications", label: "Notifications", icon: Bell },
@@ -59,6 +62,8 @@ export default function DashboardLayout({
   const [userName, setUserName] = useState("User");
   const [userCredits, setUserCredits] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [popularSubjects, setPopularSubjects] = useState<{ id: string; name: string; code: string }[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -79,6 +84,13 @@ export default function DashboardLayout({
               .eq("user_id", userData.id)
               .eq("read", false);
             setUnreadCount(count || 0);
+
+            const { data: subjects } = await supabase
+              .from("subjects")
+              .select("id, name, code")
+              .order("name")
+              .limit(6);
+            setPopularSubjects(subjects || []);
           }
         }
       } catch {
@@ -87,6 +99,18 @@ export default function DashboardLayout({
     }
     loadUser();
   }, []);
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  }
+
+  function handleSubjectClick(subjectId: string) {
+    router.push(`/explore?subject=${subjectId}`);
+  }
 
   async function handleLogout() {
     try {
@@ -135,6 +159,62 @@ export default function DashboardLayout({
                   <item.icon className="h-4 w-4" />
                   {item.label}
                 </span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Search Block */}
+        <div className="px-3 pb-2">
+          <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Search Web
+            </p>
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search notes & web..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-md bg-background pl-8 pr-2.5 py-1.5 text-xs border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+                />
+              </div>
+            </form>
+            {popularSubjects.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {popularSubjects.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => handleSubjectClick(s.id)}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    {s.code}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-3 pb-2 space-y-1">
+          {bottomNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </span>
                 {item.label === "Notifications" && unreadCount > 0 && (
                   <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
                     {unreadCount > 9 ? "9+" : unreadCount}
@@ -143,7 +223,7 @@ export default function DashboardLayout({
               </Link>
             );
           })}
-        </nav>
+        </div>
 
         <div className="px-3 py-4 space-y-2">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">

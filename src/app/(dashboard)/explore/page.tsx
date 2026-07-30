@@ -1,26 +1,73 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { NoteCard } from "@/components/notes/note-card";
-import { Search, BookOpen, Loader2, SlidersHorizontal, X } from "lucide-react";
+import { Search, BookOpen, Loader2, SlidersHorizontal, X, ExternalLink, Globe } from "lucide-react";
 
-export default function ExplorePage() {
+function ExploreContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const queryParam = searchParams.get("q");
+  const subjectParam = searchParams.get("subject");
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(queryParam || "");
   const [showFilters, setShowFilters] = useState(false);
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState(subjectParam || "");
   const [sortBy, setSortBy] = useState("newest");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [webResults, setWebResults] = useState<any[]>([]);
+  const [webLoading, setWebLoading] = useState(false);
+
+  const loadNotes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { getNotes, searchNotes } = await import("@/actions/notes");
+      let result;
+      if (searchQuery) {
+        result = await searchNotes(searchQuery);
+      } else {
+        result = await getNotes({ limit: 50 });
+      }
+      if (result.data) {
+        let filtered = result.data;
+        if (selectedSubject) {
+          filtered = result.data.filter((n: any) => n.subject_id === selectedSubject);
+        }
+        if (sortBy === "popular") {
+          filtered.sort((a: any, b: any) => (b.downloads || 0) - (a.downloads || 0));
+        } else if (sortBy === "rated") {
+          filtered.sort((a: any, b: any) => (b.average_rating || 0) - (a.average_rating || 0));
+        }
+        setNotes(filtered);
+      }
+    } catch (err) {
+      console.error("Failed to load notes:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, selectedSubject, sortBy]);
 
   useEffect(() => {
     loadCurrentUser();
-    loadNotes();
     loadSubjects();
   }, []);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  useEffect(() => {
+    if (searchQuery && searchQuery.length >= 2) {
+      loadWebResults();
+    } else {
+      setWebResults([]);
+    }
+  }, [searchQuery]);
 
   async function loadCurrentUser() {
     const { createClient } = await import("@/lib/supabase/client");
@@ -43,52 +90,34 @@ export default function ExplorePage() {
     setSubjects(data || []);
   }
 
-  async function loadNotes() {
-    setLoading(true);
+  async function loadWebResults() {
+    if (!searchQuery || searchQuery.length < 2) return;
+    setWebLoading(true);
     try {
-      const { getNotes } = await import("@/actions/notes");
-      const { data, error } = await getNotes({ limit: 50 });
-      if (data) {
-        let filtered = data;
-        if (selectedSubject) {
-          filtered = data.filter((n: any) => n.subject_id === selectedSubject);
-        }
-        if (sortBy === "popular") {
-          filtered.sort((a: any, b: any) => (b.downloads || 0) - (a.downloads || 0));
-        } else if (sortBy === "rated") {
-          filtered.sort((a: any, b: any) => (b.average_rating || 0) - (a.average_rating || 0));
-        }
-        setNotes(filtered);
-      }
+      const res = await fetch(`/api/search/web?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      setWebResults(data.results || []);
     } catch (err) {
-      console.error("Failed to load notes:", err);
+      console.error("Web search error:", err);
+      setWebResults([]);
     } finally {
-      setLoading(false);
+      setWebLoading(false);
     }
   }
 
-  async function handleSearch(e: React.FormEvent) {
+  function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!searchQuery.trim()) {
-      loadNotes();
+      router.push("/explore");
       return;
     }
-    setLoading(true);
-    try {
-      const { searchNotes } = await import("@/actions/notes");
-      const { data } = await searchNotes(searchQuery);
-      if (data) setNotes(data);
-    } catch (err) {
-      console.error("Search failed:", err);
-    } finally {
-      setLoading(false);
-    }
+    router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`, { scroll: false });
   }
 
   function handleClearFilters() {
     setSelectedSubject("");
     setSortBy("newest");
-    loadNotes();
+    router.push("/explore");
   }
 
   const hasFilters = selectedSubject || sortBy !== "newest";
@@ -114,7 +143,7 @@ export default function ExplorePage() {
               className="pl-9"
             />
           </div>
-          <Button type="submit">Search</Button>
+          <Button type="submit">Search Notes & Web</Button>
         </form>
         <Button
           variant={showFilters ? "default" : "outline"}
@@ -169,7 +198,7 @@ export default function ExplorePage() {
             </Button>
           )}
 
-          <Button size="sm" onClick={loadNotes}>
+          <Button size="sm" onClick={() => { loadNotes(); if (searchQuery) loadWebResults(); }}>
             Apply
           </Button>
         </div>
@@ -180,25 +209,98 @@ export default function ExplorePage() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : notes.length === 0 ? (
+      ) : notes.length === 0 && !searchQuery ? (
         <div className="rounded-xl border border-border/50 bg-card p-12 text-center">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-muted-foreground">
-            {searchQuery ? "No notes found matching your search." : "No notes uploaded yet. Be the first!"}
+            No notes uploaded yet. Be the first!
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {notes.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              currentUserId={currentUserId || undefined}
-              onDelete={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
-            />
-          ))}
+        <div className="space-y-8">
+          {/* Database Notes */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Notes from Syllexa
+              <span className="text-xs text-muted-foreground/50 font-normal">({notes.length} found)</span>
+            </h2>
+            {notes.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {notes.map((note) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    currentUserId={currentUserId || undefined}
+                    onDelete={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/30 bg-muted/20 p-6 text-center">
+                <p className="text-sm text-muted-foreground">No notes found in the database for this search.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Web Results */}
+          {searchQuery && (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Web Results
+                {webLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              </h2>
+              {webLoading && notes.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : webResults.length > 0 ? (
+                <div className="space-y-2">
+                  {webResults.map((r, i) => (
+                    <a
+                      key={i}
+                      href={r.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border/30 bg-card p-3 hover:border-primary/30 hover:bg-accent/30 transition-all"
+                    >
+                      <div className="flex items-start gap-2">
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-primary truncate">{r.title}</p>
+                          <p className="text-xs text-muted-foreground/60 truncate">{r.source}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{r.snippet}</p>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                !webLoading && (
+                  <div className="rounded-lg border border-border/30 bg-muted/20 p-6 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No web results found. Try a different search term or configure the Google Search API.
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
   );
 }
