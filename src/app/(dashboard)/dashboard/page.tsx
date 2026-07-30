@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { NoteCard } from "@/components/notes/note-card";
 import {
   BookOpen,
@@ -14,11 +16,13 @@ import {
   Flame,
   Loader2,
   Sparkles,
+  Search,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const [userName, setUserName] = useState("Student");
   const [recentNotes, setRecentNotes] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [stats, setStats] = useState({
     totalNotes: 0,
     openRequests: 0,
@@ -26,6 +30,7 @@ export default function DashboardPage() {
     rank: "--",
   });
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     loadDashboard();
@@ -81,7 +86,21 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Search Bar */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (searchQuery.trim()) router.push(`/explore?q=${encodeURIComponent(searchQuery.trim())}`); }}
+        className="relative max-w-xl"
+      >
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search notes across Syllexa..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </form>
+
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl font-bold">

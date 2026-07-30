@@ -8,7 +8,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HierarchySelector } from "@/components/hierarchy-selector";
-import { Upload, FileText, Loader2, X } from "lucide-react";
+import { Upload, FileText, Loader2, X, Image } from "lucide-react";
+
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "text/plain",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+
+const ALLOWED_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt,.ppt,.pptx";
+const MAX_SIZE = 50 * 1024 * 1024;
 
 export default function UploadPage() {
   const router = useRouter();
@@ -30,17 +45,17 @@ export default function UploadPage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (selected) {
-      if (selected.type !== "application/pdf") {
-        setError("Only PDF files are allowed");
+      if (!ALLOWED_TYPES.includes(selected.type)) {
+        setError("Unsupported file type. Please upload a PDF, image, or document file.");
         return;
       }
-      if (selected.size > 50 * 1024 * 1024) {
+      if (selected.size > MAX_SIZE) {
         setError("File size must be less than 50MB");
         return;
       }
       setFile(selected);
       if (!title) {
-        setTitle(selected.name.replace(".pdf", "").replace(/[-_]/g, " "));
+        setTitle(selected.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
       }
       setError("");
     }
@@ -49,10 +64,10 @@ export default function UploadPage() {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type === "application/pdf") {
+    if (droppedFile && ALLOWED_TYPES.includes(droppedFile.type)) {
       setFile(droppedFile);
       if (!title) {
-        setTitle(droppedFile.name.replace(".pdf", "").replace(/[-_]/g, " "));
+        setTitle(droppedFile.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
       }
       setError("");
     }
@@ -82,13 +97,15 @@ export default function UploadPage() {
         return;
       }
 
-      // 2. Extract text from PDF (client-side)
+      // 2. Extract text from PDF (client-side, PDF only)
       let contentText = "";
-      try {
-        const { extractTextFromPDF } = await import("@/lib/pdf-extract");
-        contentText = await extractTextFromPDF(file);
-      } catch {
-        // PDF extraction failed — continue without text
+      if (file.type === "application/pdf") {
+        try {
+          const { extractTextFromPDF } = await import("@/lib/pdf-extract");
+          contentText = await extractTextFromPDF(file);
+        } catch {
+          // PDF extraction failed — continue without text
+        }
       }
 
       // 3. Create note record
@@ -182,17 +199,17 @@ export default function UploadPage() {
               >
                 <Upload className="h-10 w-10 text-muted-foreground/50 mb-3" />
                 <p className="text-sm text-muted-foreground mb-1">
-                  Drag and drop your PDF here, or click to browse
+                  Drag and drop your file here, or click to browse
                 </p>
                 <p className="text-xs text-muted-foreground/70">
-                  PDF files up to 50MB
+                  PDF, images, Word docs & more — up to 50MB
                 </p>
               </div>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf"
+              accept={ALLOWED_EXTENSIONS}
               onChange={handleFileChange}
               className="hidden"
             />

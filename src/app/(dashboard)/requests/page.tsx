@@ -261,10 +261,12 @@ function RequestsContent() {
     setFulfillError("");
     try {
       let contentText = "";
-      try {
-        const { extractTextFromPDF } = await import("@/lib/pdf-extract");
-        contentText = await extractTextFromPDF(fulfillFile);
-      } catch {}
+      if (fulfillFile.type === "application/pdf") {
+        try {
+          const { extractTextFromPDF } = await import("@/lib/pdf-extract");
+          contentText = await extractTextFromPDF(fulfillFile);
+        } catch {}
+      }
 
       const { uploadFile } = await import("@/actions/upload");
       const fileExt = fulfillFile.name.split(".").pop();
@@ -628,12 +630,12 @@ function RequestsContent() {
                         <p className="text-sm font-medium">Fulfill this request</p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Upload a PDF note to earn <strong className="text-yellow-500">{detailRequest.reward_credits} credits</strong>
+                        Upload a note (PDF, image, or document) to earn <strong className="text-yellow-500">{detailRequest.reward_credits} credits</strong>
                       </p>
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt,.ppt,.pptx"
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
@@ -655,7 +657,7 @@ function RequestsContent() {
                           className="w-full"
                           onClick={() => fileInputRef.current?.click()}
                         >
-                          <Upload className="h-3 w-3 mr-1" /> Select PDF to upload
+                          <Upload className="h-3 w-3 mr-1" /> Select file to upload
                         </Button>
                       )}
                       <Button

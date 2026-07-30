@@ -2,12 +2,24 @@
 
 import { createClient } from "@/lib/supabase/server";
 
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "text/plain",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+];
+
 export async function uploadFile(file: File, path: string) {
   const supabase = await createClient();
   if (!supabase) return { data: null, error: "Supabase not configured" };
 
-  if (file.type !== "application/pdf") {
-    return { data: null, error: "Only PDF files are allowed" };
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { data: null, error: "Unsupported file type. Allowed: PDF, PNG, JPG, WEBP, DOC, DOCX, TXT, PPT, PPTX" };
   }
 
   const { data, error } = await supabase.storage

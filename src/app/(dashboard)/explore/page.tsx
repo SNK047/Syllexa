@@ -123,30 +123,17 @@ function ExploreContent() {
   const hasFilters = selectedSubject || sortBy !== "newest";
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Explore Notes</h1>
-        <p className="text-muted-foreground">
-          Browse notes from students across universities
-        </p>
-      </div>
-
-      {/* Search + Filter Toggle */}
-      <div className="flex gap-2">
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notes by title or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button type="submit">Search Notes & Web</Button>
-        </form>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Explore Notes</h1>
+          <p className="text-sm text-muted-foreground">
+            Browse notes from students across universities
+          </p>
+        </div>
         <Button
           variant={showFilters ? "default" : "outline"}
+          size="sm"
           onClick={() => setShowFilters(!showFilters)}
         >
           <SlidersHorizontal className="h-4 w-4 mr-2" />
@@ -157,9 +144,23 @@ function ExploreContent() {
         </Button>
       </div>
 
+      {/* Search + Filter Toggle */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search notes by title or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" size="sm">Search Notes & Web</Button>
+      </form>
+
       {/* Filters Panel */}
       {showFilters && (
-        <div className="flex flex-wrap items-end gap-4 p-4 rounded-lg border border-border/50 bg-card">
+        <div className="flex flex-wrap items-end gap-3 p-3 rounded-lg border border-border/50 bg-card">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Subject</label>
             <select
@@ -167,7 +168,7 @@ function ExploreContent() {
               onChange={(e) => {
                 setSelectedSubject(e.target.value);
               }}
-              className="block w-48 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              className="block w-44 px-3 py-1.5 rounded-lg border border-border bg-background text-sm"
             >
               <option value="">All Subjects</option>
               {subjects.map((s) => (
@@ -183,7 +184,7 @@ function ExploreContent() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="block w-40 px-3 py-2 rounded-lg border border-border bg-background text-sm"
+              className="block w-36 px-3 py-1.5 rounded-lg border border-border bg-background text-sm"
             >
               <option value="newest">Newest First</option>
               <option value="popular">Most Downloaded</option>
@@ -204,7 +205,7 @@ function ExploreContent() {
         </div>
       )}
 
-      {/* Notes Grid */}
+      {/* Results */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
