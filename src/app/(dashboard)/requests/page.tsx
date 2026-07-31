@@ -310,8 +310,9 @@ function RequestsContent() {
       setDetailRequest(null);
       setFulfillFile(null);
       loadData();
-    } catch {
-      setFulfillError("Failed to fulfill request");
+    } catch (err) {
+      console.error("Fulfill failed:", err);
+      setFulfillError("Failed to fulfill request. Try a smaller file or try again.");
     } finally {
       setFulfilling(false);
     }

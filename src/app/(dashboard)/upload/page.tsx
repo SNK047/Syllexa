@@ -137,8 +137,9 @@ export default function UploadPage() {
       setTimeout(() => {
         router.push("/explore");
       }, 1500);
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      setError(err?.message?.includes("limit") ? "File is too large to upload." : "Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }
