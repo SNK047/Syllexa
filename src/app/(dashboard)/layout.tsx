@@ -255,8 +255,56 @@ export default function DashboardLayout({
                 <img src="/logox.jpg" alt="Syllexa" className="h-7 w-7 rounded" />
                 <span className="text-lg font-bold">Syllexa</span>
               </div>
-              <nav className="px-3 py-4 space-y-1">
+              <nav className="px-3 py-3 space-y-0.5">
                 {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </span>
+                      {item.label === "Notifications" && unreadCount > 0 && (
+                        <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Mobile Search Block */}
+              <div className="px-3 pb-3">
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    Search Web
+                  </p>
+                  <form onSubmit={handleSearchSubmit}>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search notes & web..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full rounded-md bg-background pl-8 pr-2.5 py-1.5 text-xs border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <nav className="px-3 pb-3 space-y-0.5">
+                {bottomNavItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link

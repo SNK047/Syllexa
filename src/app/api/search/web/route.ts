@@ -7,77 +7,76 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const url = new URL("https://api.duckduckgo.com/");
-    url.searchParams.set("q", query);
-    url.searchParams.set("format", "json");
-    url.searchParams.set("no_html", "1");
-    url.searchParams.set("skip_disambig", "1");
-    url.searchParams.set("t", "syllexa");
-
-    const res = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(8000),
-      headers: { "Accept": "application/json" },
+    const res = await fetch("https://html.duckduckgo.com/html/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+      },
+      body: new URLSearchParams({
+        q: query,
+        kl: "us-en",
+      }),
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!res.ok) {
-      console.error("DuckDuckGo API error:", res.status);
+      console.error("DuckDuckGo search error:", res.status);
       return NextResponse.json({ results: [], error: "Search request failed" });
     }
 
-    const data = await res.json();
+    const html = await res.text();
 
-    const results: { title: string; link: string; snippet: string; source: string }[] = [];
-
-    if (data.AbstractText && data.AbstractURL) {
-      results.push({
-        title: data.Heading || data.AbstractSource || "Summary",
-        link: data.AbstractURL,
-        snippet: data.AbstractText.slice(0, 300),
-        source: data.AbstractSource || "duckduckgo.com",
-      });
-    }
-
-    if (data.Results && Array.isArray(data.Results)) {
-      for (const item of data.Results) {
-        if (item.FirstURL && item.Text) {
-          results.push({
-            title: item.Text.split(" - ")[0] || item.Text.slice(0, 80),
-            link: item.FirstURL,
-            snippet: item.Text,
-            source: new URL(item.FirstURL).hostname,
-          });
-        }
-      }
-    }
-
-    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
-      for (const topic of data.RelatedTopics) {
-        if (topic.FirstURL && topic.Text) {
-          results.push({
-            title: topic.Text.split(" - ")[0] || topic.Text.slice(0, 80),
-            link: topic.FirstURL,
-            snippet: topic.Text,
-            source: new URL(topic.FirstURL).hostname,
-          });
-        }
-        if (topic.Topics && Array.isArray(topic.Topics)) {
-          for (const sub of topic.Topics) {
-            if (sub.FirstURL && sub.Text) {
-              results.push({
-                title: sub.Text.split(" - ")[0] || sub.Text.slice(0, 80),
-                link: sub.FirstURL,
-                snippet: sub.Text,
-                source: new URL(sub.FirstURL).hostname,
-              });
-            }
-          }
-        }
-      }
-    }
+    const results = parseDuckDuckGoHtml(html).slice(0, 10);
 
     return NextResponse.json({ results });
   } catch (err) {
     console.error("DuckDuckGo search error:", err);
     return NextResponse.json({ results: [], error: "Search request failed" });
   }
+}
+
+function parseDuckDuckGoHtml(html: string) {
+  const results: { title: string; link: string; snippet: string; source: string }[] = [];
+
+  const resultBlocks = html.split('class="result');
+
+  for (const block of resultBlocks.slice(1)) {
+    try {
+      const linkMatch = block.match(/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/);
+      const snippetMatch = block.match(/<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/);
+
+      if (!linkMatch) continue;
+
+      let link = linkMatch[1];
+      if (link.startsWith("//")) link = "https:" + link;
+
+      const title = stripHtml(linkMatch[2]).trim() || link;
+      const snippet = snippetMatch ? stripHtml(snippetMatch[1]).trim() : "";
+
+      let source = "";
+      try {
+        source = new URL(link).hostname.replace("www.", "");
+      } catch {}
+
+      results.push({ title, link, snippet, source });
+    } catch {
+      continue;
+    }
+  }
+
+  return results;
+}
+
+function stripHtml(html: string) {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
