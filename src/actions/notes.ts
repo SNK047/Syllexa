@@ -146,7 +146,7 @@ export async function searchNotes(query: string) {
       units:unit_id (id, number, title)
     `)
     .eq("status", "PUBLISHED")
-    .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+    .or(`title.ilike.%${query}%,description.ilike.%${query}%,content_text.ilike.%${query}%`)
     .order("created_at", { ascending: false })
     .limit(20);
 

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HierarchySelector } from "@/components/hierarchy-selector";
-import { Upload, FileText, Loader2, X, Image } from "lucide-react";
+import { Upload, FileText, Loader2, X } from "lucide-react";
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -84,20 +84,40 @@ export default function UploadPage() {
     setError("");
 
     try {
-      // 1. Upload file to Supabase Storage
-      const { uploadFile } = await import("@/actions/upload");
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
 
-      const uploadResult = await uploadFile(file, filePath);
-      if (uploadResult.error) {
-        setError(uploadResult.error);
+      // Step 1: Upload file via API route
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", filePath);
+
+      let uploadData: any;
+      try {
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const text = await uploadRes.text();
+        try {
+          uploadData = JSON.parse(text);
+        } catch {
+          setError(`Server returned an invalid response (${uploadRes.status}). Please try again.`);
+          setUploading(false);
+          return;
+        }
+        if (!uploadRes.ok || uploadData.error) {
+          setError(uploadData.error || `Upload failed (${uploadRes.status})`);
+          setUploading(false);
+          return;
+        }
+      } catch (fetchErr: any) {
+        setError(`Could not reach upload server: ${fetchErr?.message || "Network error"}`);
         setUploading(false);
         return;
       }
 
-      // 2. Extract text from PDF (client-side, PDF only)
+      const publicUrl = uploadData.data.publicUrl;
+
+      // Step 2: Extract text from PDF (client-side)
       let contentText = "";
       if (file.type === "application/pdf") {
         try {
@@ -108,38 +128,51 @@ export default function UploadPage() {
         }
       }
 
-      // 3. Create note record
-      const { createNote } = await import("@/actions/notes");
-      const noteResult = await createNote({
-        title,
-        description: description || undefined,
-        subject_id: hierarchy.subjectId,
-        unit_id: hierarchy.unitId,
-        file_url: uploadResult.data!.publicUrl,
-        file_size: file.size,
-        content_text: contentText || undefined,
-      });
-
-      if (noteResult.error) {
-        setError(noteResult.error);
+      // Step 3: Create note record in database
+      let noteResult: any;
+      try {
+        const { createNote } = await import("@/actions/notes");
+        noteResult = await createNote({
+          title,
+          description: description || undefined,
+          subject_id: hierarchy.subjectId,
+          unit_id: hierarchy.unitId,
+          file_url: publicUrl,
+          file_size: file.size,
+          content_text: contentText || undefined,
+        });
+      } catch (noteErr: any) {
+        setError(`Failed to save note: ${noteErr?.message || "Database error"}`);
         setUploading(false);
         return;
       }
 
-      const { addCredits } = await import("@/actions/credits");
-      const creditResult = await addCredits(5, "upload", "Uploaded a new note");
-      if (creditResult.error) {
-        console.error("Credit assignment failed:", creditResult.error);
+      if (noteResult.error) {
+        if (noteResult.error.includes("foreign key") || noteResult.error.includes("violates")) {
+          setError("Selected subject or unit not found. Please refresh the page and try again.");
+        } else {
+          setError(`Note save failed: ${noteResult.error}`);
+        }
+        setUploading(false);
+        return;
+      }
+
+      // Step 4: Add upload credits
+      try {
+        const { addCredits } = await import("@/actions/credits");
+        const creditResult = await addCredits(5, "upload", "Uploaded a new note");
+        if (creditResult.error) {
+          console.error("Credit assignment failed:", creditResult.error);
+        }
+      } catch {
+        // Credits are non-critical
       }
 
       setSuccess(true);
-
-      setTimeout(() => {
-        router.push("/explore");
-      }, 1500);
+      setTimeout(() => router.push("/explore"), 1500);
     } catch (err: any) {
       console.error("Upload failed:", err);
-      setError(err?.message?.includes("limit") ? "File is too large to upload." : "Something went wrong. Please try again.");
+      setError(err?.message || "Something went wrong. Please try again.");
     } finally {
       setUploading(false);
     }

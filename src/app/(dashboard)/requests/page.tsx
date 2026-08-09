@@ -268,15 +268,20 @@ function RequestsContent() {
         } catch {}
       }
 
-      const { uploadFile } = await import("@/actions/upload");
       const fileExt = fulfillFile.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
-      const uploadResult = await uploadFile(fulfillFile, filePath);
-      if (uploadResult.error) {
-        setFulfillError(uploadResult.error);
-        return;
-      }
+      const formData = new FormData();
+      formData.append("file", fulfillFile);
+      formData.append("path", filePath);
+      let uploadData: any;
+      try {
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const text = await uploadRes.text();
+        try { uploadData = JSON.parse(text); } catch { setFulfillError("Server returned an invalid response. Please try again."); return; }
+        if (!uploadRes.ok || uploadData.error) { setFulfillError(uploadData.error || "Upload failed"); return; }
+      } catch (fetchErr: any) { setFulfillError(`Could not reach upload server: ${fetchErr?.message || "Network error"}`); return; }
+      const publicUrl = uploadData.data.publicUrl;
 
       const { createNote } = await import("@/actions/notes");
       const noteResult = await createNote({
@@ -284,7 +289,7 @@ function RequestsContent() {
         description: detailRequest.description,
         subject_id: detailRequest.subject_id,
         unit_id: detailRequest.unit_id,
-        file_url: uploadResult.data!.publicUrl,
+        file_url: publicUrl,
         file_size: fulfillFile.size,
         content_text: contentText || undefined,
       });
