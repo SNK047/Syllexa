@@ -41,7 +41,7 @@ ON CONFLICT (id) DO UPDATE SET
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE policyname = 'Authenticated users can upload notes'
-      AND bucket_id = 'notes' AND command = 'INSERT'
+      AND tablename = 'objects' AND schemaname = 'storage'
   ) THEN
     CREATE POLICY "Authenticated users can upload notes"
       ON storage.objects FOR INSERT TO authenticated
@@ -53,7 +53,7 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE policyname = 'Public read access for notes'
-      AND bucket_id = 'notes' AND command = 'SELECT'
+      AND tablename = 'objects' AND schemaname = 'storage'
   ) THEN
     CREATE POLICY "Public read access for notes"
       ON storage.objects FOR SELECT TO public
@@ -65,7 +65,7 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete own notes'
-      AND bucket_id = 'notes' AND command = 'DELETE'
+      AND tablename = 'objects' AND schemaname = 'storage'
   ) THEN
     CREATE POLICY "Users can delete own notes"
       ON storage.objects FOR DELETE TO authenticated
@@ -77,7 +77,7 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert own notes'
-      AND tablename = 'notes' AND command = 'INSERT'
+      AND tablename = 'notes' AND schemaname = 'public'
   ) THEN
     CREATE POLICY "Users can insert own notes"
       ON notes FOR INSERT WITH CHECK (auth.uid() = user_id);
@@ -88,7 +88,7 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert own credits'
-      AND tablename = 'credits_log' AND command = 'INSERT'
+      AND tablename = 'credits_log' AND schemaname = 'public'
   ) THEN
     CREATE POLICY "Users can insert own credits"
       ON credits_log FOR INSERT WITH CHECK (auth.uid() = user_id);
