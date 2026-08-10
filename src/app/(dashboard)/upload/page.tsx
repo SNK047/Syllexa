@@ -141,10 +141,48 @@ export default function UploadPage() {
           file_size: file.size,
           content_text: contentText || undefined,
         });
-      } catch (noteErr: any) {
-        setError(`Failed to save note: ${noteErr?.message || "Database error"}`);
-        setUploading(false);
-        return;
+      } catch {
+        noteResult = { data: null, error: "Server action unavailable" };
+      }
+
+      // Fallback: use browser client if server action failed
+      if (!noteResult.data && noteResult.error) {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          if (supabase) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const insertPayload: Record<string, any> = {
+                title,
+                user_id: user.id,
+                subject_id: hierarchy.subjectId,
+                unit_id: hierarchy.unitId,
+                file_url: publicUrl,
+                status: "PUBLISHED",
+              };
+              if (description) insertPayload.description = description;
+              if (file.size) insertPayload.file_size = file.size;
+              if (contentText) insertPayload.content_text = contentText;
+
+              const { data, error: dbErr } = await supabase
+                .from("notes")
+                .insert(insertPayload)
+                .select()
+                .single();
+              if (dbErr) {
+                setError(`Database error: ${dbErr.message}${dbErr.details ? ` — ${dbErr.details}` : ""}`);
+                setUploading(false);
+                return;
+              }
+              noteResult = { data, error: null };
+            }
+          }
+        } catch (fallbackErr: any) {
+          setError(`Failed to save note: ${fallbackErr?.message || noteResult.error || "Unknown error"}`);
+          setUploading(false);
+          return;
+        }
       }
 
       if (noteResult.error) {

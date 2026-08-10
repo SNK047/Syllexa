@@ -69,51 +69,68 @@ export async function createNote(note: {
   file_size?: number;
   content_text?: string;
 }) {
-  const supabase = await createClient();
-  if (!supabase) return { data: null, error: "Supabase not configured" };
+  try {
+    const supabase = await createClient();
+    if (!supabase) return { data: null, error: "Supabase not configured" };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) return { data: null, error: "Not authenticated" };
+    if (!user) return { data: null, error: "Not authenticated" };
 
-  const { data, error } = await supabase
-    .from("notes")
-    .insert({
+    const insertPayload: Record<string, any> = {
       title: note.title,
-      description: note.description,
       user_id: user.id,
       subject_id: note.subject_id,
       unit_id: note.unit_id,
       file_url: note.file_url,
-      file_size: note.file_size,
-      content_text: note.content_text,
       status: "PUBLISHED",
-    })
-    .select()
-    .single();
+    };
 
-  return { data, error: error?.message };
+    if (note.description) insertPayload.description = note.description;
+    if (note.file_size) insertPayload.file_size = note.file_size;
+    if (note.content_text) insertPayload.content_text = note.content_text;
+
+    const { data, error } = await supabase
+      .from("notes")
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("createNote DB error:", error.message, error.details, error.hint);
+      return { data: null, error: error.message + (error.details ? ` — ${error.details}` : "") };
+    }
+
+    return { data, error: null };
+  } catch (err: any) {
+    console.error("createNote exception:", err);
+    return { data: null, error: err?.message || "Unknown error in createNote" };
+  }
 }
 
 export async function deleteNote(id: string) {
-  const supabase = await createClient();
-  if (!supabase) return { error: "Supabase not configured" };
+  try {
+    const supabase = await createClient();
+    if (!supabase) return { error: "Supabase not configured" };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) return { error: "Not authenticated" };
+    if (!user) return { error: "Not authenticated" };
 
-  const { error } = await supabase
-    .from("notes")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+    const { error } = await supabase
+      .from("notes")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
 
-  return { error: error?.message };
+    return { error: error?.message };
+  } catch (err: any) {
+    return { error: err?.message || "Delete failed" };
+  }
 }
 
 export async function getNotesByUser(userId: string) {
